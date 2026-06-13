@@ -1,26 +1,1368 @@
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
-<h1>这里将要搭建一个 wordle 网站 </h1>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>值日安排</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+        .file-status {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+        }
+        .file-status.has-file {
+            background: rgba(40, 167, 69, 0.3);
+        }
+        .file-status.no-file {
+            background: rgba(255, 107, 107, 0.3);
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        input, select {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        input[type="number"] {
+            width: 80px;
+            flex: none;
+        }
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.danger {
+            background: #ff6b6b;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        button.outline {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+        button.outline:hover {
+            background: #667eea;
+            color: white;
+        }
+        .student-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .student-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #f5f5f5;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .student-tag:hover {
+            transform: scale(1.05);
+        }
+        .student-tag.selected {
+            background: #667eea;
+            color: white;
+        }
+        .student-tag.selected .count {
+            background: white;
+            color: #667eea;
+        }
+        .student-tag .count {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        .student-tag .delete {
+            cursor: pointer;
+            color: #999;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .student-tag .delete:hover {
+            color: #ff4757;
+        }
+        .student-tag.not-in-class {
+            opacity: 0.5;
+            background: #f0f0f0;
+        }
+        .student-tag.not-in-class .inclass-btn {
+            opacity: 0.5;
+        }
+        .student-tag .inclass-btn {
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 2px;
+        }
+        .student-tag .inclass-btn:hover {
+            transform: scale(1.2);
+        }
+        .duty-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .duty-controls select {
+            flex: none;
+            min-width: auto;
+        }
+        .result-area {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+            display: none;
+        }
+        .result-area.show {
+            display: block;
+        }
+        .result-area h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+        .result-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .result-tag {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 500;
+            animation: popIn 0.3s ease;
+        }
+        .result-tag .task {
+            display: block;
+            font-size: 12px;
+            font-weight: normal;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .empty-tip {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 12px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .group-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .group-tab {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .group-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .group-tab:hover:not(.active) {
+            background: #e0e0e0;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        .import-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+        .import-tip {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            width: 100%;
+        }
+        .group-tab .delete-group {
+            margin-left: 5px;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .group-tab .delete-group:hover {
+            color: #ff0000;
+        }
+        .task-list {
+            margin-top: 10px;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .task-item input {
+            flex: 1;
+            min-width: auto;
+            padding: 8px 12px;
+        }
+        .task-item input[type="number"] {
+            width: 60px;
+        }
+        .task-item .delete-task {
+            cursor: pointer;
+            color: #ff6b6b;
+            font-size: 18px;
+        }
+        .task-item .task-name {
+            min-width: 100px;
+            font-weight: 500;
+        }
+        .task-item .task-count {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+        .method-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .method-tab {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .method-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .selection-hint {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .data-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .lottery-section {
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            background: #f8f9ff;
+        }
+        .lottery-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        .task-config {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .task-config-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+        .task-config-item input[type="number"] {
+            width: 60px;
+        }
+        .lottery-result {
+            margin-top: 20px;
+        }
+        .lottery-result h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .lottery-result .task-group {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+        .lottery-result .task-group-name {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .lottery-result .task-group-name button {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .lottery-result .students-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .lottery-result .student-chip {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 值日安排</h1>
+        
+        <div class="file-status no-file" id="fileStatus">
+            未选择数据文件 - 请选择或创建数据文件
+        </div>
+        
+        <div class="import-area">
+            <button onclick="createDataFile()">📁 创建新数据文件</button>
+            <button class="secondary" onclick="openDataFile()">📂 打开已有文件</button>
+            <button class="success" onclick="saveDataFile()" id="saveBtn" disabled>💾 保存到文件</button>
+            <button class="danger" onclick="disconnectFile()" id="disconnectBtn" disabled>🔌 断开连接</button>
+        </div>
+        
+        <div class="card">
+            <h2>
+                <span>学生管理</span>
+                <button class="small secondary" onclick="showAllStudents()">显示全部</button>
+            </h2>
+            
+            <div class="import-area" style="background: #fff;">
+                <div class="file-input-wrapper">
+                    <button onclick="document.getElementById('excelFile').click()">📥 导入Excel</button>
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="importExcel(event)">
+                </div>
+                <div class="file-input-wrapper">
+                    <button class="secondary" onclick="downloadTemplate()">📋 下载模板</button>
+                </div>
+                <button class="danger" onclick="clearAll()">清空全部</button>
+            </div>
+            <div class="import-tip">Excel格式：第一列姓名，第二列分组 | 选择数据文件后，所有更改会自动保存</div>
+            
+            <div class="group-tabs" id="groupTabs"></div>
+            
+            <div class="input-group">
+                <input type="text" id="studentName" placeholder="输入学生姓名" onkeypress="handleEnter(event)">
+                <select id="studentGroup" onchange="handleGroupChange()">
+                    <option value="">不分组</option>
+                    <option value="__new__">+ 新建分组</option>
+                </select>
+                <button onclick="addStudent()">添加</button>
+            </div>
+            <div class="input-group" id="newGroupInput" style="display: none;">
+                <input type="text" id="newGroupName" placeholder="输入新分组名称" onkeypress="handleEnterNewGroup(event)">
+                <button onclick="createGroup()">创建</button>
+                <button class="secondary" onclick="cancelNewGroup()">取消</button>
+            </div>
+            
+            <div class="student-list" id="studentList"></div>
+        </div>
+        
+        <div class="card">
+            <h2>安排值日</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalStudents">0</div>
+                    <div class="stat-label">学生人数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalDuties">0</div>
+                    <div class="stat-label">总值日次数</div>
+                </div>
+            </div>
+            
+            <div class="method-tabs">
+                <button class="method-tab active" onclick="setMethod('rotate', this)">🔄 轮排分配</button>
+                <button class="method-tab" onclick="setMethod('assign', this)">✏️ 指定分配</button>
+            </div>
+            
+            <div id="assignHint" class="selection-hint" style="display: none;">
+                点击学生卡片选择要值日的学生
+            </div>
+            
+            <div class="duty-controls">
+                <label>人数：</label>
+                <input type="number" id="dutyCount" value="1" min="1" max="50">
+                <select id="targetGroup">
+                    <option value="">全部学生</option>
+                </select>
+                <select id="targetTask">
+                    <option value="">随机任务</option>
+                </select>
+                <button onclick="executeDuty()">开始分配</button>
+                <button class="danger" onclick="resetLastDuty()">重置本次</button>
+            </div>
+            <div id="resultArea" class="result-area">
+                <h3>本次值日：</h3>
+                <div id="resultTags" class="result-tags"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🎲 抽签分配</h2>
+            <p style="color: #666; margin-bottom: 15px;">根据任务人数要求，随机抽取学生进行分配</p>
+            
+            <div class="task-config" id="taskConfig">
+                <div class="empty-tip">请先添加值日任务</div>
+            </div>
+            
+            <div class="duty-controls">
+                <select id="lotteryGroup">
+                    <option value="">全部学生</option>
+                </select>
+                <button class="success" onclick="runLottery()">🎲 开始抽签</button>
+                <button class="danger" onclick="resetLottery()">重置本次</button>
+            </div>
+            
+            <div class="lottery-result" id="lotteryResult"></div>
+        </div>
+        
+        <div class="card">
+            <h2>值日记录</h2>
+            <div id="dutyHistory"></div>
+        </div>
+        
+        <div class="card">
+            <h2>值日任务设置</h2>
+            <div class="input-group">
+                <input type="text" id="newTask" placeholder="输入任务名称" onkeypress="handleEnterTask(event)">
+                <button class="small" onclick="addTask()">添加任务</button>
+            </div>
+            <div class="task-list" id="taskList"></div>
+        </div>
+    </div>
+
+    <script>
+        let data = {
+            students: [],
+            groups: [],
+            tasks: [
+                { name: '扫地', count: 2 },
+                { name: '擦黑板', count: 1 },
+                { name: '倒垃圾', count: 1 },
+                { name: '整理桌椅', count: 2 }
+            ],
+            dutyHistory: []
+        };
+        
+        let fileHandle = null;
+        let currentGroup = '';
+        let selectedStudents = new Set();
+        let currentMethod = 'rotate';
+        let autoSaveTimer = null;
+        let lotteryResult = [];
+        let lastDutyResult = null;
+
+        async function createDataFile() {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: '值日数据.json',
+                    types: [{
+                        description: 'JSON文件',
+                        accept: {'application/json': ['.json']}
+                    }]
+                });
+                fileHandle = handle;
+                await saveToFile();
+                updateFileStatus(true);
+                alert('数据文件创建成功！');
+            } catch (err) {
+                console.log('取消创建文件');
+            }
+        }
+
+        async function openDataFile() {
+            try {
+                const [handle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: 'JSON文件',
+                        accept: {'application/json': ['.json']}
+                    }]
+                });
+                fileHandle = handle;
+                await loadFromFile();
+                updateFileStatus(true);
+            } catch (err) {
+                console.log('取消打开文件');
+            }
+        }
+
+        async function saveToFile() {
+            if (!fileHandle) return;
+            try {
+                const writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(data, null, 2));
+                await writable.close();
+                updateFileStatus(true);
+                localStorage.setItem('dutyData', JSON.stringify(data));
+                localStorage.setItem('lastFileName', fileHandle.name);
+            } catch (err) {
+                console.error('保存失败', err);
+                alert('保存失败: ' + err.message);
+            }
+        }
+
+        async function loadFromFile() {
+            if (!fileHandle) return;
+            try {
+                const file = await fileHandle.getFile();
+                const content = await file.text();
+                const parsed = JSON.parse(content);
+                
+                if (!parsed.tasks || typeof parsed.tasks[0] === 'string') {
+                    data.tasks = (parsed.tasks || []).map(t => ({
+                        name: typeof t === 'string' ? t : t.name,
+                        count: 1
+                    }));
+                } else {
+                    data.tasks = parsed.tasks;
+                }
+                data.students = (parsed.students || []).map(s => ({ ...s, inClass: s.inClass !== false }));
+                data.groups = parsed.groups || [];
+                data.dutyHistory = parsed.dutyHistory || [];
+                
+                localStorage.setItem('dutyData', JSON.stringify(data));
+                refreshUI();
+            } catch (err) {
+                console.error('加载失败', err);
+                alert('加载失败: ' + err.message);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('dutyData');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.tasks) {
+                        if (typeof parsed.tasks[0] === 'string') {
+                            data.tasks = parsed.tasks.map(t => ({ name: t, count: 1 }));
+                        } else {
+                            data.tasks = parsed.tasks;
+                        }
+                    }
+                    data.students = (parsed.students || []).map(s => ({ ...s, inClass: s.inClass !== false }));
+                    data.groups = parsed.groups || [];
+                    data.dutyHistory = parsed.dutyHistory || [];
+                    refreshUI();
+                    const lastFileName = localStorage.getItem('lastFileName');
+                    if (lastFileName) {
+                        document.getElementById('fileStatus').textContent = '📁 ' + lastFileName + ' (本地缓存) - 点击"打开已有文件"连接文件';
+                        document.getElementById('fileStatus').className = 'file-status has-file';
+                    }
+                    return true;
+                } catch(e) {
+                    console.error('加载本地数据失败', e);
+                }
+            }
+            return false;
+        }
+
+        async function tryRestoreLastFile() {
+            const lastFileName = localStorage.getItem('lastFileName');
+            if (lastFileName) {
+                try {
+                    const handles = await window.showOpenFilePicker({
+                        types: [{
+                            description: 'JSON文件',
+                            accept: {'application/json': ['.json']}
+                        }]
+                    });
+                    fileHandle = handles[0];
+                    await loadFromFile();
+                    updateFileStatus(true);
+                } catch(err) {
+                    console.log('无法自动恢复文件，请手动打开');
+                    document.getElementById('fileStatus').textContent = '📁 ' + lastFileName + ' (本地缓存) - 请点击"打开已有文件"重新连接';
+                    document.getElementById('fileStatus').className = 'file-status has-file';
+                }
+            }
+        }
+
+        async function saveDataFile() {
+            if (!fileHandle) {
+                alert('请先创建或打开数据文件');
+                return;
+            }
+            await saveToFile();
+        }
+
+        function scheduleAutoSave() {
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            if (fileHandle) {
+                autoSaveTimer = setTimeout(() => {
+                    saveToFile();
+                }, 1000);
+            }
+            localStorage.setItem('dutyData', JSON.stringify(data));
+        }
+
+        function updateFileStatus(hasFile) {
+            const status = document.getElementById('fileStatus');
+            const saveBtn = document.getElementById('saveBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            if (hasFile && fileHandle) {
+                status.textContent = '📁 ' + fileHandle.name + ' - 已连接';
+                status.className = 'file-status has-file';
+                saveBtn.disabled = false;
+                disconnectBtn.disabled = false;
+            } else {
+                status.textContent = '未选择数据文件 - 请选择或创建数据文件';
+                status.className = 'file-status no-file';
+                saveBtn.disabled = true;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        function disconnectFile() {
+            fileHandle = null;
+            localStorage.removeItem('lastFileName');
+            updateFileStatus(false);
+        }
+
+        function refreshUI() {
+            renderStudents();
+            renderGroupTabs();
+            renderHistory();
+            renderTasks();
+            renderTaskConfig();
+            initGroupSelects();
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') addStudent();
+        }
+
+        function handleEnterTask(e) {
+            if (e.key === 'Enter') addTask();
+        }
+
+        function addStudent() {
+            const nameInput = document.getElementById('studentName');
+            const groupSelect = document.getElementById('studentGroup');
+            const name = nameInput.value.trim();
+            const group = groupSelect.value;
+            if (!name) return;
+            if (data.students.find(s => s.name === name)) {
+                alert('该学生已存在！');
+                return;
+            }
+            data.students.push({ name, count: 0, group, inClass: true });
+            nameInput.value = '';
+            renderStudents();
+            renderGroupTabs();
+            initGroupSelects();
+            scheduleAutoSave();
+        }
+
+        function removeStudent(name) {
+            data.students = data.students.filter(s => s.name !== name);
+            renderStudents();
+            renderGroupTabs();
+            initGroupSelects();
+            scheduleAutoSave();
+        }
+
+        function toggleStudentSelect(name) {
+            if (selectedStudents.has(name)) {
+                selectedStudents.delete(name);
+            } else {
+                selectedStudents.add(name);
+            }
+            renderStudents();
+        }
+
+        function renderGroupTabs() {
+            const tabs = document.getElementById('groupTabs');
+            
+            let html = `<button class="group-tab ${currentGroup === '' ? 'active' : ''}" onclick="filterByGroup('')">全部 (${data.students.length})</button>`;
+            data.groups.forEach(g => {
+                const count = data.students.filter(s => s.group === g).length;
+                html += `<button class="group-tab ${currentGroup === g ? 'active' : ''}" onclick="filterByGroup('${g}')">${g}组 (${count})<span class="delete-group" onclick="deleteGroup('${g}', event)">×</span></button>`;
+            });
+            tabs.innerHTML = html;
+        }
+
+        function deleteGroup(group, event) {
+            event.stopPropagation();
+            if (!confirm(`确定要删除 "${group}" 分组吗？该组学生将变为未分组。`)) return;
+            data.students.forEach(s => {
+                if (s.group === group) s.group = '';
+            });
+            data.groups = data.groups.filter(g => g !== group);
+            if (currentGroup === group) currentGroup = '';
+            initGroupSelects();
+            renderGroupTabs();
+            renderStudents();
+            scheduleAutoSave();
+        }
+
+        function filterByGroup(group) {
+            currentGroup = group;
+            renderGroupTabs();
+            renderStudents();
+        }
+
+        function showAllStudents() {
+            filterByGroup('');
+        }
+
+        function renderStudents() {
+            const list = document.getElementById('studentList');
+            const totalStudents = document.getElementById('totalStudents');
+            const totalDuties = document.getElementById('totalDuties');
+            
+            totalStudents.textContent = data.students.length;
+            totalDuties.textContent = data.students.reduce((sum, s) => sum + s.count, 0);
+
+            let filteredStudents = currentGroup ? data.students.filter(s => s.group === currentGroup) : data.students;
+            
+            if (filteredStudents.length === 0) {
+                list.innerHTML = '<div class="empty-tip">暂无学生，请添加或导入</div>';
+                return;
+            }
+            
+            list.innerHTML = filteredStudents
+                .sort((a, b) => a.count - b.count)
+                .map(s => `
+                    <div class="student-tag ${selectedStudents.has(s.name) ? 'selected' : ''} ${!s.inClass ? 'not-in-class' : ''}" 
+                         onclick="${currentMethod === 'assign' ? `toggleStudentSelect('${s.name}')` : ''}">
+                        ${s.name}${s.group ? ' [' + s.group + ']' : ''}
+                        <span class="count">${s.count}次</span>
+                        <span class="inclass-btn ${s.inClass ? 'active' : ''}" onclick="event.stopPropagation();toggleInClass('${s.name}')" title="${s.inClass ? '在课室' : '不在课室'}">
+                            ${s.inClass ? '🏫' : '🏠'}
+                        </span>
+                        ${currentMethod !== 'assign' ? `<span class="delete" onclick="event.stopPropagation();removeStudent('${s.name}')">×</span>` : ''}
+                    </div>
+                `).join('');
+        }
+
+        function toggleInClass(name) {
+            const student = data.students.find(s => s.name === name);
+            if (student) {
+                student.inClass = !student.inClass;
+                renderStudents();
+                scheduleAutoSave();
+            }
+        }
+
+        function initGroupSelects() {
+            const studentGroup = document.getElementById('studentGroup');
+            const targetGroup = document.getElementById('targetGroup');
+            const lotteryGroup = document.getElementById('lotteryGroup');
+            
+            const studentOptions = Array.from(studentGroup.options);
+            studentOptions.forEach((opt, i) => {
+                if (opt.value && opt.value !== '' && opt.value !== '__new__') {
+                    studentGroup.removeChild(opt);
+                }
+            });
+            
+            while (targetGroup.options.length > 1) {
+                targetGroup.removeChild(targetGroup.options[1]);
+            }
+            while (lotteryGroup.options.length > 1) {
+                lotteryGroup.removeChild(lotteryGroup.options[1]);
+            }
+            
+            data.groups.forEach(g => {
+                const opt1 = document.createElement('option');
+                opt1.value = g;
+                opt1.textContent = g + '组';
+                studentGroup.insertBefore(opt1, studentGroup.querySelector('option[value="__new__"]'));
+                
+                const opt2 = document.createElement('option');
+                opt2.value = g;
+                opt2.textContent = g + '组';
+                targetGroup.appendChild(opt2);
+                
+                const opt3 = document.createElement('option');
+                opt3.value = g;
+                opt3.textContent = g + '组';
+                lotteryGroup.appendChild(opt3);
+            });
+        }
+
+        function handleGroupChange() {
+            const select = document.getElementById('studentGroup');
+            const newGroupInput = document.getElementById('newGroupInput');
+            if (select.value === '__new__') {
+                newGroupInput.style.display = 'flex';
+                document.getElementById('newGroupName').focus();
+            } else {
+                newGroupInput.style.display = 'none';
+            }
+        }
+
+        function handleEnterNewGroup(e) {
+            if (e.key === 'Enter') createGroup();
+        }
+
+        function createGroup() {
+            const name = document.getElementById('newGroupName').value.trim().toUpperCase();
+            if (!name) {
+                alert('请输入分组名称');
+                return;
+            }
+            if (data.groups.includes(name)) {
+                alert('该分组已存在');
+                return;
+            }
+            data.groups.push(name);
+            document.getElementById('newGroupName').value = '';
+            document.getElementById('newGroupInput').style.display = 'none';
+            document.getElementById('studentGroup').value = name;
+            initGroupSelects();
+            renderGroupTabs();
+            scheduleAutoSave();
+        }
+
+        function cancelNewGroup() {
+            document.getElementById('newGroupName').value = '';
+            document.getElementById('newGroupInput').style.display = 'none';
+            document.getElementById('studentGroup').value = '';
+        }
+
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+            const targetTask = document.getElementById('targetTask');
+            
+            while (targetTask.options.length > 1) {
+                targetTask.removeChild(targetTask.options[1]);
+            }
+            
+            data.tasks.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.name;
+                opt.textContent = t.name + ' (' + t.count + '人)';
+                targetTask.appendChild(opt);
+            });
+            
+            taskList.innerHTML = data.tasks.map(t => `
+                <div class="task-item">
+                    <span class="task-name">${t.name}</span>
+                    <span class="delete-task" onclick="removeTask('${t.name}')">×</span>
+                </div>
+            `).join('') || '<div class="empty-tip">暂无任务</div>';
+        }
+
+        function renderTaskConfig() {
+            const config = document.getElementById('taskConfig');
+            if (data.tasks.length === 0) {
+                config.innerHTML = '<div class="empty-tip">请先添加值日任务</div>';
+                return;
+            }
+            config.innerHTML = data.tasks.map((t, i) => `
+                <div class="task-config-item">
+                    <span class="task-name">${t.name}</span>
+                    <span>需</span>
+                    <input type="number" id="lotteryTaskCount${i}" value="${t.count}" min="1" max="50">
+                    <span>人</span>
+                </div>
+            `).join('');
+        }
+
+        function addTask() {
+            const input = document.getElementById('newTask');
+            const task = input.value.trim();
+            if (!task) return;
+            if (data.tasks.find(t => t.name === task)) {
+                alert('该任务已存在！');
+                return;
+            }
+            data.tasks.push({ name: task, count: 1 });
+            input.value = '';
+            renderTasks();
+            renderTaskConfig();
+            scheduleAutoSave();
+        }
+
+        function removeTask(task) {
+            data.tasks = data.tasks.filter(t => t.name !== task);
+            renderTasks();
+            renderTaskConfig();
+            scheduleAutoSave();
+        }
+
+        function getActiveStudents() {
+            const targetGroup = document.getElementById('targetGroup').value;
+            if (targetGroup) {
+                return data.students.filter(s => s.group === targetGroup && s.inClass);
+            }
+            return data.students.filter(s => s.inClass);
+        }
+
+        function getLotteryStudents() {
+            const lotteryGroup = document.getElementById('lotteryGroup').value;
+            if (lotteryGroup) {
+                return data.students.filter(s => s.group === lotteryGroup && s.inClass);
+            }
+            return data.students.filter(s => s.inClass);
+        }
+
+        function setMethod(method, btn) {
+            currentMethod = method;
+            document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const hint = document.getElementById('assignHint');
+            if (method === 'assign') {
+                hint.style.display = 'block';
+                selectedStudents.clear();
+            } else {
+                hint.style.display = 'none';
+            }
+            renderStudents();
+        }
+
+        function executeDuty() {
+            let selected = [];
+            
+            if (currentMethod === 'assign') {
+                if (selectedStudents.size === 0) {
+                    alert('请先选择学生！');
+                    return;
+                }
+                selected = data.students.filter(s => selectedStudents.has(s.name));
+                selectedStudents.clear();
+            } else if (currentMethod === 'draw') {
+                const activeStudents = getActiveStudents();
+                if (activeStudents.length === 0) {
+                    alert('没有可分配的学生！');
+                    return;
+                }
+                const count = parseInt(document.getElementById('dutyCount').value) || 1;
+                const shuffled = [...activeStudents].sort(() => Math.random() - 0.5);
+                selected = shuffled.slice(0, Math.min(count, shuffled.length));
+            } else if (currentMethod === 'rotate') {
+                const activeStudents = getActiveStudents();
+                if (activeStudents.length === 0) {
+                    alert('没有可分配的学生！');
+                    return;
+                }
+                const count = parseInt(document.getElementById('dutyCount').value) || 1;
+                const sorted = [...activeStudents].sort((a, b) => a.count - b.count);
+                const minCount = sorted[0].count;
+                const candidates = sorted.filter(s => s.count === minCount);
+                const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+                selected = shuffled.slice(0, Math.min(count, shuffled.length));
+                
+                if (selected.length < count) {
+                    const remaining = count - selected.length;
+                    const others = sorted.filter(s => s.count > minCount).sort(() => Math.random() - 0.5).slice(0, Math.min(remaining, sorted.length - candidates.length));
+                    selected.push(...others);
+                }
+            }
+            
+            const targetTask = document.getElementById('targetTask').value;
+            
+            selected.forEach(s => {
+                const student = data.students.find(st => st.name === s.name);
+                if (student) student.count++;
+            });
+            
+            const task = targetTask || data.tasks[Math.floor(Math.random() * data.tasks.length)]?.name || '';
+            
+            data.dutyHistory.unshift({
+                date: new Date().toLocaleString(),
+                method: currentMethod === 'draw' ? '抽签' : currentMethod === 'rotate' ? '轮排' : '指定',
+                students: selected.map(s => ({ name: s.name, task }))
+            });
+            
+            lastDutyResult = {
+                students: selected.map(s => ({ name: s.name, task }))
+            };
+            
+            showResult(selected, task);
+            renderStudents();
+            renderHistory();
+            scheduleAutoSave();
+        }
+
+        function resetLastDuty() {
+            if (!lastDutyResult) {
+                alert('没有可重置的分配');
+                return;
+            }
+            
+            lastDutyResult.students.forEach(s => {
+                const student = data.students.find(st => st.name === s.name);
+                if (student) student.count--;
+            });
+            
+            if (data.dutyHistory.length > 0 && (data.dutyHistory[0].method === '轮排' || data.dutyHistory[0].method === '指定')) {
+                data.dutyHistory.shift();
+            }
+            
+            lastDutyResult = null;
+            document.getElementById('resultArea').classList.remove('show');
+            renderStudents();
+            renderHistory();
+            scheduleAutoSave();
+        }
+
+        function showResult(selected, task) {
+            const resultArea = document.getElementById('resultArea');
+            const resultTags = document.getElementById('resultTags');
+            resultArea.classList.add('show');
+            resultTags.innerHTML = selected.map((s, i) => 
+                `<div class="result-tag" style="animation-delay: ${i * 0.1}s">
+                    ${s.name}
+                    <span class="task">${task}</span>
+                </div>`
+            ).join('');
+        }
+
+        function runLottery() {
+            const availableStudents = getLotteryStudents();
+            if (availableStudents.length === 0) {
+                alert('没有可分配的学生！');
+                return;
+            }
+            
+            const totalNeeded = data.tasks.reduce((sum, t, i) => {
+                const countInput = document.getElementById('lotteryTaskCount' + i);
+                return sum + (parseInt(countInput?.value) || t.count);
+            }, 0);
+            
+            if (totalNeeded > availableStudents.length) {
+                alert('学生人数不足！需要 ' + totalNeeded + ' 人，当前只有 ' + availableStudents.length + ' 人');
+                return;
+            }
+            
+            const shuffled = [...availableStudents].sort(() => Math.random() - 0.5);
+            let studentIndex = 0;
+            
+            lotteryResult = data.tasks.map((t, i) => {
+                const countInput = document.getElementById('lotteryTaskCount' + i);
+                const needCount = parseInt(countInput?.value) || t.count;
+                const selected = shuffled.slice(studentIndex, studentIndex + needCount);
+                studentIndex += needCount;
+                
+                return {
+                    task: t.name,
+                    students: selected
+                };
+            });
+            
+            data.dutyHistory.unshift({
+                date: new Date().toLocaleString(),
+                method: '抽签',
+                students: lotteryResult.flatMap(r => r.students.map(s => ({ name: s.name, task: r.task })))
+            });
+            
+            renderLotteryResult();
+            renderStudents();
+            renderHistory();
+            scheduleAutoSave();
+        }
+
+        function renderLotteryResult() {
+            const result = document.getElementById('lotteryResult');
+            if (lotteryResult.length === 0) {
+                result.innerHTML = '';
+                return;
+            }
+            
+            result.innerHTML = lotteryResult.map((r, index) => `
+                <div class="task-group">
+                    <div class="task-group-name">
+                        ${r.task} (${r.students.length}人)
+                        <button class="small" onclick="rerollTask(${index})">🔄 重新抽签</button>
+                    </div>
+                    <div class="students-row">
+                        ${r.students.map(s => `<span class="student-chip">${s.name}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function rerollTask(taskIndex) {
+            const r = lotteryResult[taskIndex];
+            const needCount = r.students.length;
+            
+            const usedNames = lotteryResult.flatMap(tr => tr.students.map(s => s.name));
+            const availableStudents = data.students.filter(s => !usedNames.includes(s.name));
+            
+            const lotteryGroup = document.getElementById('lotteryGroup').value;
+            let pool = lotteryGroup ? availableStudents.filter(s => s.group === lotteryGroup) : availableStudents;
+            
+            if (pool.length < needCount) {
+                pool = [...pool, ...availableStudents.filter(s => !pool.includes(s))];
+            }
+            
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+            const newSelected = shuffled.slice(0, needCount);
+            
+            lotteryResult[taskIndex].students = newSelected;
+            
+            if (data.dutyHistory.length > 0 && data.dutyHistory[0].method === '抽签') {
+                data.dutyHistory[0].students = lotteryResult.flatMap(r => r.students.map(s => ({ name: s.name, task: r.task })));
+            }
+            
+            renderLotteryResult();
+            renderStudents();
+            renderHistory();
+            scheduleAutoSave();
+        }
+
+        function resetLottery() {
+            if (data.dutyHistory.length > 0 && data.dutyHistory[0].method === '抽签') {
+                data.dutyHistory.shift();
+            }
+            
+            lotteryResult = [];
+            renderLotteryResult();
+            renderStudents();
+            renderHistory();
+            scheduleAutoSave();
+        }
+
+        function resetCounts() {
+            if (!confirm('确定要重置所有学生的值日次数吗？')) return;
+            data.students.forEach(s => s.count = 0);
+            data.dutyHistory = [];
+            lotteryResult = [];
+            renderStudents();
+            renderHistory();
+            renderLotteryResult();
+            scheduleAutoSave();
+        }
+
+        function clearAll() {
+            if (!confirm('确定要清空所有数据吗？')) return;
+            data = {
+                students: [],
+                groups: [],
+                tasks: [
+                    { name: '扫地', count: 1 },
+                    { name: '擦黑板', count: 1 },
+                    { name: '倒垃圾', count: 1 },
+                    { name: '整理桌椅', count: 1 }
+                ],
+                dutyHistory: []
+            };
+            currentGroup = '';
+            selectedStudents.clear();
+            lotteryResult = [];
+            refreshUI();
+            scheduleAutoSave();
+        }
+
+        function renderHistory() {
+            const history = document.getElementById('dutyHistory');
+            if (data.dutyHistory.length === 0) {
+                history.innerHTML = '<div class="empty-tip">暂无记录</div>';
+                return;
+            }
+            history.innerHTML = data.dutyHistory.slice(0, 10).map(h => `
+                <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                    <div style="font-size: 12px; color: #999;">${h.date} · ${h.method}</div>
+                    <div style="margin-top: 5px;">${h.students.map(s => s.name + (s.task ? `(${s.task})` : '')).join('、')}</div>
+                </div>
+            `).join('');
+        }
+
+        function importExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(content, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                let addedCount = 0;
+                let newGroups = [];
+                
+                jsonData.forEach(row => {
+                    if (row[0] && typeof row[0] === 'string') {
+                        const name = row[0].trim();
+                        const group = row[1] ? String(row[1]).trim().toUpperCase() : '';
+                        if (name && !data.students.find(s => s.name === name)) {
+                            if (group && !data.groups.includes(group) && !newGroups.includes(group)) {
+                                newGroups.push(group);
+                            }
+                            data.students.push({ name, count: 0, group: group || '' });
+                            addedCount++;
+                        }
+                    }
+                });
+                
+                if (newGroups.length > 0) {
+                    data.groups = [...data.groups, ...newGroups];
+                    initGroupSelects();
+                }
+                
+                alert(`成功导入 ${addedCount} 名学生${newGroups.length > 0 ? '，新增分组: ' + newGroups.join(', ') : ''}`);
+                renderStudents();
+                renderGroupTabs();
+                scheduleAutoSave();
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
+        function downloadTemplate() {
+            const data_template = [['姓名', '分组'], ['张三', 'A'], ['李四', 'B'], ['王五', '']];
+            const ws = XLSX.utils.aoa_to_sheet(data_template);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '学生名单');
+            XLSX.writeFile(wb, '值日生模板.xlsx');
+        }
+
+        async function initApp() {
+            if (loadFromLocalStorage()) {
+                await tryRestoreLastFile();
+            } else {
+                refreshUI();
+            }
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
