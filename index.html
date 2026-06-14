@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Generator</title>
+    <title>Word Generator | 控制台可控版</title>
     <style>
         * {
             margin: 0;
@@ -189,340 +189,486 @@
             margin-top: 10px;
             letter-spacing: 2px;
         }
+        
+        .console-tip {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.6);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #8f8;
+            pointer-events: none;
+            z-index: 999;
+            backdrop-filter: blur(4px);
+        }
     </style>
 </head>
 <body>
-    <div id="app">
-        <div id="main-screen">
-            <h1>WORD GENERATOR</h1>
-            <p style="color:#888; margin-bottom:30px;">随机生成 6 位字符并评分</p>
-            <button class="btn" id="generate-btn">生 成</button>
-        </div>
-        <div id="result-screen">
-            <div id="word-display"></div>
-            <div class="word-text" id="word-text"></div>
-            <div id="rating"></div>
-            <div id="score"></div>
-            <button class="btn" id="restart-btn" style="display:none;">RESTART</button>
-            <div id="breakdown"></div>
-        </div>
+<div id="app">
+    <div id="main-screen">
+        <h1>WORD GENERATOR</h1>
+        <p style="color:#888; margin-bottom:30px;">随机生成 6 位字符并评分</p>
+        <button class="btn" id="generate-btn">生 成</button>
     </div>
+    <div id="result-screen">
+        <div id="word-display"></div>
+        <div class="word-text" id="word-text"></div>
+        <div id="rating"></div>
+        <div id="score"></div>
+        <button class="btn" id="restart-btn" style="display:none;">RESTART</button>
+        <div id="breakdown"></div>
+    </div>
+</div>
+<div class="console-tip">
+    🎮 控制台可用: setNextWord("abcdef") ｜ clearNextWord()
+</div>
 
-    <script>
-        const CHARS = 'abcdefghijklmnopqrstuvwxyz ';
-        const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
+<script>
+    // ---------- 基础配置 ----------
+    const CHARS = 'abcdefghijklmnopqrstuvwxyz ';
+    const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
 
-        let generated = [];
-
-        document.getElementById('generate-btn').addEventListener('click', startGeneration);
-        document.getElementById('restart-btn').addEventListener('click', restart);
-
-        function startGeneration() {
-            document.getElementById('main-screen').style.display = 'none';
-            document.getElementById('result-screen').style.display = 'block';
-            document.getElementById('rating').textContent = '';
-            document.getElementById('score').textContent = '';
-            document.getElementById('breakdown').innerHTML = '';
-            document.getElementById('restart-btn').style.display = 'none';
-            document.getElementById('word-text').textContent = '';
-
-            const wordDisplay = document.getElementById('word-display');
-            wordDisplay.innerHTML = '';
-            for (let i = 0; i < 6; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'char-slot';
-                slot.id = `slot-${i}`;
-                slot.innerHTML = '<span class="slot-char"></span>';
-                wordDisplay.appendChild(slot);
-            }
-
-            generated = [];
-            generateSequence(0);
+    let generated = [];          // 存储当前生成的字符数组（长度6）
+    
+    // ---------- 全局控制台 API ----------
+    // 存储下一次固定单词（字符串，长度6，仅允许小写字母或空格）
+    let _nextFixedWordRaw = null;    // 原始字符串缓存，未验证
+    
+    /**
+     * 在控制台调用：设置下一次生成时使用的固定字符串（长度必须为6，只能包含小写字母 a-z 或 空格）
+     * 例：setNextWord("hello "), setNextWord("abcxyz"), setNextWord("abc  d") 等
+     * 注意：只影响接下来的一次点击「生成」，使用后自动清除。
+     */
+    window.setNextWord = function(wordStr) {
+        if (typeof wordStr !== 'string') {
+            console.warn('❌ setNextWord 需要传入字符串，例如 setNextWord("abcxyz")');
+            return false;
         }
-
-        function generateSequence(index) {
-            if (index >= 6) {
-                processResult();
-                return;
-            }
-
-            const slot = document.getElementById(`slot-${index}`);
-            slot.classList.add('active');
-
-            let spinCount = 0;
-            const spinMax = 12 + Math.floor(Math.random() * 8);
-            const charSpan = slot.querySelector('.slot-char');
-
-            const spinInterval = setInterval(() => {
-                charSpan.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
-                spinCount++;
-                if (spinCount >= spinMax) {
-                    clearInterval(spinInterval);
-                    const finalChar = CHARS[Math.floor(Math.random() * CHARS.length)];
-                    generated.push(finalChar);
-
-                    const wordStarted = generated.slice(0, index).some(c => c !== ' ');
-                    if (finalChar === ' ') {
-                        if (!wordStarted) {
-                            charSpan.textContent = '␣';
-                            slot.classList.add('space-char');
-                        } else {
-                            charSpan.textContent = '_';
-                            slot.classList.add('underscore-char');
-                        }
-                    } else {
-                        charSpan.textContent = finalChar;
-                    }
-
-                    slot.classList.remove('active');
-                    slot.classList.add('revealed');
-                    setTimeout(() => generateSequence(index + 1), 300);
-                }
-            }, 60);
+        if (wordStr.length !== 6) {
+            console.warn(`❌ 字符串长度必须为 6 个字符，当前长度: ${wordStr.length}`);
+            return false;
         }
-
-        function processResult() {
-            let wordStarted = false;
-            let word = '';
-
-            for (let i = 0; i < 6; i++) {
-                const c = generated[i];
-                if (c === ' ') {
-                    if (wordStarted) word += '_';
+        // 校验字符合法性: 只能包含小写字母 a-z 或者空格
+        const validPattern = /^[a-z ]{6}$/;
+        if (!validPattern.test(wordStr)) {
+            console.warn(`❌ 仅允许小写字母 a-z 和空格，当前字符串: "${wordStr}"`);
+            return false;
+        }
+        _nextFixedWordRaw = wordStr;
+        console.log(`✅ 已设置下一次固定单词: "${wordStr}" (只生效一次，点击【生成】后自动清除)`);
+        return true;
+    };
+    
+    /**
+     * 清除下一次固定单词的预设，恢复完全随机生成。
+     */
+    window.clearNextWord = function() {
+        if (_nextFixedWordRaw !== null) {
+            console.log(`🧹 已清除预设单词 (原预设: "${_nextFixedWordRaw}")`);
+            _nextFixedWordRaw = null;
+        } else {
+            console.log('ℹ️ 当前没有任何预设单词，生成将保持完全随机');
+        }
+    };
+    
+    /**
+     * 查看当前预设的下一次单词（如果有）
+     */
+    window.getNextWordPreset = function() {
+        if (_nextFixedWordRaw) {
+            console.log(`📌 当前预设: "${_nextFixedWordRaw}" (未使用，点击【生成】后将生效一次)`);
+            return _nextFixedWordRaw;
+        } else {
+            console.log('📌 当前无预设，下一次生成为完全随机');
+            return null;
+        }
+    };
+    
+    // 显示帮助信息
+    console.log(
+        '%c✨ Word Generator 控制台扩展已就绪 ✨\n%c可用方法:\n setNextWord("字符串")   - 预设下一个6位单词(小写字母/空格)\n clearNextWord()        - 清除预设\n getNextWordPreset()    - 查看当前预设',
+        'color: #9f7aea; font-size: 12px; font-weight: bold;',
+        'color: #88cc88; font-size: 11px;'
+    );
+    
+    // ---------- DOM 元素绑定 ----------
+    const generateBtn = document.getElementById('generate-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    
+    generateBtn.addEventListener('click', startGeneration);
+    restartBtn.addEventListener('click', restart);
+    
+    // ---------- 核心生成逻辑（支持预设固定单词，且只影响下一次） ----------
+    /**
+     * 开始生成序列（滚动动画+最终结果）
+     * 根据全局 _nextFixedWordRaw 决定是否使用固定字符，使用后立即清除预设。
+     */
+    function startGeneration() {
+        // 1. 切换界面
+        document.getElementById('main-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('rating').textContent = '';
+        document.getElementById('score').textContent = '';
+        document.getElementById('breakdown').innerHTML = '';
+        document.getElementById('restart-btn').style.display = 'none';
+        document.getElementById('word-text').textContent = '';
+        
+        // 2. 构建单词显示槽位
+        const wordDisplay = document.getElementById('word-display');
+        wordDisplay.innerHTML = '';
+        for (let i = 0; i < 6; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'char-slot';
+            slot.id = `slot-${i}`;
+            slot.innerHTML = '<span class="slot-char"></span>';
+            wordDisplay.appendChild(slot);
+        }
+        
+        // 3. 处理预设单词（只消耗一次）
+        let fixedWordArray = null;
+        if (_nextFixedWordRaw !== null) {
+            const presetStr = _nextFixedWordRaw;
+            // 再次校验格式（防御）
+            if (presetStr.length === 6 && /^[a-z ]{6}$/.test(presetStr)) {
+                fixedWordArray = presetStr.split('');   // 字符数组，例如 ['h','e','l','l','o',' ']
+                console.log(`🎯 使用预设单词: "${presetStr}"，本次生成将展示预设结果`);
+            } else {
+                console.warn(`⚠️ 预设单词格式无效: "${presetStr}"，将使用随机生成`);
+                fixedWordArray = null;
+            }
+            // 关键: 预设只生效一次，无论是否有效都清除原始预设，避免重复使用
+            _nextFixedWordRaw = null;
+        }
+        
+        // 清空全局 generated 数组
+        generated = [];
+        
+        // 开始递归生成动画（传入固定单词数组，没有则为 null）
+        generateSequence(0, fixedWordArray);
+    }
+    
+    /**
+     * 递归生成每一位字符（带滚动动画）
+     * @param {number} index         当前生成位置 0~5
+     * @param {Array<string>|null} fixedChars  若不为null，则最终字符必须从该数组对应索引取得
+     */
+    function generateSequence(index, fixedChars) {
+        if (index >= 6) {
+            // 所有字符生成完毕，进行评分及展示
+            processResult();
+            return;
+        }
+        
+        const slot = document.getElementById(`slot-${index}`);
+        slot.classList.add('active');
+        
+        let spinCount = 0;
+        // 随机滚动次数 (视觉丰富)
+        const spinMax = 12 + Math.floor(Math.random() * 8);
+        const charSpan = slot.querySelector('.slot-char');
+        
+        const spinInterval = setInterval(() => {
+            // 滚动时展示随机字符 (从 CHARS 中随机)
+            const randomChar = CHARS[Math.floor(Math.random() * CHARS.length)];
+            // 临时显示随机字符（空格会显示为特殊临时样式？为视觉舒适，简单显示为空格符）
+            if (randomChar === ' ') {
+                charSpan.textContent = '␣';
+            } else {
+                charSpan.textContent = randomChar;
+            }
+            spinCount++;
+            if (spinCount >= spinMax) {
+                clearInterval(spinInterval);
+                
+                // ---------- 决定最终字符 ----------
+                let finalChar;
+                if (fixedChars && fixedChars[index] !== undefined) {
+                    // 使用预设字符
+                    finalChar = fixedChars[index];
                 } else {
-                    wordStarted = true;
-                    word += c;
+                    // 完全随机
+                    finalChar = CHARS[Math.floor(Math.random() * CHARS.length)];
                 }
-            }
-
-            const wordLength = word.length;
-            document.getElementById('word-text').textContent = `「${word || '(空)'}」`;
-
-            const breakdown = [];
-            let totalScore = 0;
-
-            // 长度为0特殊处理
-            if (wordLength === 0) {
-                breakdown.push({ desc: '单词长度为 0（奇迹！）', points: 88888 });
-                totalScore = 88888;
-                showResults(totalScore, breakdown);
-                return;
-            }
-
-            // 长度得分
-            const lengthScores = { 6: 10, 5: 20, 4: 40, 3: 80, 2: 160, 1: 320 };
-            const pts = lengthScores[wordLength] || 10;
-            breakdown.push({ desc: `单词长度为 ${wordLength}`, points: pts });
-            totalScore += pts;
-
-            // 仅字母部分
-            const letters = word.replace(/_/g, '');
-
-            // 特殊字母
-            const specialLetters = ['a', 'b', 'c', 'x', 'y', 'z'];
-            for (const letter of specialLetters) {
-                if (letters.includes(letter)) {
-                    breakdown.push({ desc: `包含字母 "${letter}"`, points: 50 });
-                    totalScore += 50;
-                }
-            }
-
-            // 连续模式检测（在字母连续段上检测）
-            const letterRuns = word.split('_').filter(r => r.length > 0);
-
-            let hasConsec = [false, false, false, false]; // 3,4,5,6
-            let hasSame = [false, false, false, false];
-
-            for (const run of letterRuns) {
-                for (let len = 3; len <= Math.min(6, run.length); len++) {
-                    for (let i = 0; i <= run.length - len; i++) {
-                        const sub = run.substring(i, i + len);
-
-                        // 字母表连续（升序或降序）
-                        let asc = true, desc = true;
-                        for (let j = 1; j < sub.length; j++) {
-                            if (sub.charCodeAt(j) - sub.charCodeAt(j - 1) !== 1) asc = false;
-                            if (sub.charCodeAt(j - 1) - sub.charCodeAt(j) !== 1) desc = false;
-                        }
-                        if (asc || desc) hasConsec[len - 3] = true;
-
-                        // 相同字母
-                        let same = true;
-                        for (let j = 1; j < sub.length; j++) {
-                            if (sub[j] !== sub[0]) { same = false; break; }
-                        }
-                        if (same) hasSame[len - 3] = true;
+                
+                // 将最终字符推入全局数组（评分流程需要）
+                generated.push(finalChar);
+                
+                // 根据当前已生成序列判定 “单词是否已经开始”（用于空格显示风格）
+                // 注意: 只看前面已经生成的字符（不包括当前这一位的前后关系，传统风格是“单词开始后空格变为下划线”）
+                let wordStarted = generated.slice(0, index).some(c => c !== ' ');
+                
+                // 更新槽位的视觉样式和文字
+                if (finalChar === ' ') {
+                    if (!wordStarted) {
+                        // 单词尚未开始: 显示␣ (空格占位符)
+                        charSpan.textContent = '␣';
+                        slot.classList.add('space-char');
+                    } else {
+                        // 单词已经开始后出现空格: 显示 _ (代表单词内分隔)
+                        charSpan.textContent = '_';
+                        slot.classList.add('underscore-char');
                     }
+                } else {
+                    charSpan.textContent = finalChar;
                 }
+                
+                slot.classList.remove('active');
+                slot.classList.add('revealed');
+                
+                // 延迟进入下一位 (营造逐个揭示感)
+                setTimeout(() => generateSequence(index + 1, fixedChars), 300);
             }
-
-            const consecScores = [100, 500, 1000, 10000];
-            const consecLabels = [3, 4, 5, 6];
-            for (let i = 0; i < 4; i++) {
-                if (hasConsec[i]) {
-                    breakdown.push({ desc: `连续 ${consecLabels[i]} 位字母在字母表中连续`, points: consecScores[i] });
-                    totalScore += consecScores[i];
-                }
-                if (hasSame[i]) {
-                    breakdown.push({ desc: `连续 ${consecLabels[i]} 位相同字母`, points: consecScores[i] });
-                    totalScore += consecScores[i];
-                }
+        }, 60);
+    }
+    
+    // ---------- 评分系统 (完全保留原有逻辑，但适配generated数组可能包含空格和字母) ----------
+    function processResult() {
+        let wordStarted = false;
+        let word = '';
+        
+        for (let i = 0; i < 6; i++) {
+            const c = generated[i];
+            if (c === ' ') {
+                if (wordStarted) word += '_';
+            } else {
+                wordStarted = true;
+                word += c;
             }
-
-            // 回文子串（长度>=3）
-            let hasPalindrome = false;
-            for (const run of letterRuns) {
-                for (let len = 3; len <= run.length && !hasPalindrome; len++) {
-                    for (let i = 0; i <= run.length - len && !hasPalindrome; i++) {
-                        const sub = run.substring(i, i + len);
-                        if (sub === sub.split('').reverse().join('')) hasPalindrome = true;
-                    }
-                }
-            }
-            if (hasPalindrome) {
-                breakdown.push({ desc: '包含回文子串', points: 50 });
+        }
+        
+        const wordLength = word.length;
+        document.getElementById('word-text').textContent = `「${word || '(空)'}」`;
+        
+        const breakdown = [];
+        let totalScore = 0;
+        
+        // 长度为0奇迹处理
+        if (wordLength === 0) {
+            breakdown.push({ desc: '单词长度为 0（奇迹！）', points: 88888 });
+            totalScore = 88888;
+            showResults(totalScore, breakdown);
+            return;
+        }
+        
+        // 长度得分
+        const lengthScores = { 6: 10, 5: 20, 4: 40, 3: 80, 2: 160, 1: 320 };
+        const pts = lengthScores[wordLength] || 10;
+        breakdown.push({ desc: `单词长度为 ${wordLength}`, points: pts });
+        totalScore += pts;
+        
+        // 仅字母部分 (去掉下划线占位符)
+        const letters = word.replace(/_/g, '');
+        
+        // 特殊字母 a,b,c,x,y,z
+        const specialLetters = ['a', 'b', 'c', 'x', 'y', 'z'];
+        for (const letter of specialLetters) {
+            if (letters.includes(letter)) {
+                breakdown.push({ desc: `包含字母 "${letter}"`, points: 50 });
                 totalScore += 50;
             }
-
-            // 6位互不相同
-            if (wordLength === 6 && !word.includes('_')) {
-                if (new Set(word.split('')).size === 6) {
-                    breakdown.push({ desc: '6 位字母互不相同', points: 70 });
-                    totalScore += 70;
-                }
-            }
-
-            // 元音
-            let vowelCount = 0;
-            for (const c of letters) { if (VOWELS.has(c)) vowelCount++; }
-            if (vowelCount > 0) {
-                breakdown.push({ desc: `包含 ${vowelCount} 个元音字母`, points: vowelCount * 40 });
-                totalScore += vowelCount * 40;
-            }
-
-            // 非特殊字母排名加分
-            const specialSet = new Set(specialLetters);
-            let posScore = 0;
-            const posDetails = [];
-            for (const c of letters) {
-                if (!specialSet.has(c)) {
-                    const rank = c.charCodeAt(0) - 96;
-                    posScore += rank;
-                    posDetails.push(`${c}(${rank})`);
-                }
-            }
-            if (posScore > 0) {
-                breakdown.push({ desc: `普通字母排名加分: ${posDetails.join(' + ')}`, points: posScore });
-                totalScore += posScore;
-            }
-
-            // 自由补充规则
-            // 整词回文
-            if (letters.length >= 3 && letters === letters.split('').reverse().join('')) {
-                breakdown.push({ desc: '✨ 整个单词为回文', points: 300 });
-                totalScore += 300;
-            }
-
-            // 首尾相同
-            if (letters.length >= 2 && letters[0] === letters[letters.length - 1]) {
-                breakdown.push({ desc: '首尾字母相同', points: 30 });
-                totalScore += 30;
-            }
-
-            // 纯辅音
-            if (letters.length > 0 && vowelCount === 0) {
-                breakdown.push({ desc: '✨ 纯辅音单词', points: 100 });
-                totalScore += 100;
-            }
-
-            // 包含 "gg"
-            if (word.includes('gg')) {
-                breakdown.push({ desc: '包含 "gg"（Good Game!）', points: 66 });
-                totalScore += 66;
-            }
-
-            // 字母半区
-            if (letters.length >= 3) {
-                if ([...letters].every(c => c.charCodeAt(0) <= 109)) {
-                    breakdown.push({ desc: '所有字母来自前半字母表 (a-m)', points: 60 });
-                    totalScore += 60;
-                }
-                if ([...letters].every(c => c.charCodeAt(0) >= 110)) {
-                    breakdown.push({ desc: '所有字母来自后半字母表 (n-z)', points: 60 });
-                    totalScore += 60;
-                }
-            }
-
-            // 元音辅音交替
-            if (letters.length >= 4) {
-                let alt = true;
-                for (let i = 1; i < letters.length; i++) {
-                    if (VOWELS.has(letters[i]) === VOWELS.has(letters[i - 1])) { alt = false; break; }
-                }
-                if (alt) {
-                    breakdown.push({ desc: '✨ 元音辅音完美交替', points: 120 });
-                    totalScore += 120;
-                }
-            }
-
-            showResults(totalScore, breakdown);
         }
-
-        function showResults(totalScore, breakdown) {
-            let rating, ratingClass;
-            if (totalScore < 100) { rating = 'TRASH'; ratingClass = 'rating-TRASH'; }
-            else if (totalScore < 150) { rating = 'COMMON'; ratingClass = 'rating-COMMON'; }
-            else if (totalScore < 280) { rating = 'RARE'; ratingClass = 'rating-RARE'; }
-            else if (totalScore < 500) { rating = 'EPIC'; ratingClass = 'rating-EPIC'; }
-            else { rating = 'MYTHIC'; ratingClass = 'rating-MYTHIC'; }
-
-            setTimeout(() => {
-                const el = document.getElementById('rating');
-                el.textContent = rating;
-                el.className = ratingClass + ' fade-in';
-            }, 200);
-
-            setTimeout(() => {
-                const el = document.getElementById('score');
-                el.className = 'fade-in';
-                let cur = 0;
-                const step = Math.max(1, Math.floor(totalScore / 40));
-                const iv = setInterval(() => {
-                    cur += step;
-                    if (cur >= totalScore) { cur = totalScore; clearInterval(iv); }
-                    el.textContent = `${cur} points`;
-                }, 25);
-            }, 600);
-
-            setTimeout(() => {
-                const btn = document.getElementById('restart-btn');
-                btn.style.display = 'inline-block';
-                btn.className = 'btn fade-in';
-            }, 1000);
-
-            setTimeout(() => {
-                const el = document.getElementById('breakdown');
-                el.className = 'fade-in';
-                el.innerHTML = '<h3>📊 得分明细</h3>';
-                breakdown.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'breakdown-item';
-                    div.innerHTML = `<span>${item.desc}</span><span class="points">+ ${item.points}</span>`;
-                    el.appendChild(div);
-                });
-                const total = document.createElement('div');
-                total.className = 'breakdown-item';
-                total.style.cssText = 'border-top:2px solid #667eea;margin-top:8px;padding-top:8px;font-weight:bold;';
-                total.innerHTML = `<span>总计</span><span class="points">${totalScore} points</span>`;
-                el.appendChild(total);
-            }, 1200);
+        
+        // 连续模式检测（字母表连续 / 相同字母）
+        const letterRuns = word.split('_').filter(r => r.length > 0);
+        let hasConsec = [false, false, false, false]; // 3,4,5,6
+        let hasSame = [false, false, false, false];
+        
+        for (const run of letterRuns) {
+            for (let len = 3; len <= Math.min(6, run.length); len++) {
+                for (let i = 0; i <= run.length - len; i++) {
+                    const sub = run.substring(i, i + len);
+                    
+                    // 字母表连续（升序或降序）
+                    let asc = true, desc = true;
+                    for (let j = 1; j < sub.length; j++) {
+                        if (sub.charCodeAt(j) - sub.charCodeAt(j - 1) !== 1) asc = false;
+                        if (sub.charCodeAt(j - 1) - sub.charCodeAt(j) !== 1) desc = false;
+                    }
+                    if (asc || desc) hasConsec[len - 3] = true;
+                    
+                    // 相同字母
+                    let same = true;
+                    for (let j = 1; j < sub.length; j++) {
+                        if (sub[j] !== sub[0]) { same = false; break; }
+                    }
+                    if (same) hasSame[len - 3] = true;
+                }
+            }
         }
-
-        function restart() {
-            document.getElementById('result-screen').style.display = 'none';
-            document.getElementById('main-screen').style.display = 'block';
-            generated = [];
+        
+        const consecScores = [100, 500, 1000, 10000];
+        const consecLabels = [3, 4, 5, 6];
+        for (let i = 0; i < 4; i++) {
+            if (hasConsec[i]) {
+                breakdown.push({ desc: `连续 ${consecLabels[i]} 位字母在字母表中连续`, points: consecScores[i] });
+                totalScore += consecScores[i];
+            }
+            if (hasSame[i]) {
+                breakdown.push({ desc: `连续 ${consecLabels[i]} 位相同字母`, points: consecScores[i] });
+                totalScore += consecScores[i];
+            }
         }
-    </script>
+        
+        // 回文子串 (长度>=3)
+        let hasPalindrome = false;
+        for (const run of letterRuns) {
+            for (let len = 3; len <= run.length && !hasPalindrome; len++) {
+                for (let i = 0; i <= run.length - len && !hasPalindrome; i++) {
+                    const sub = run.substring(i, i + len);
+                    if (sub === sub.split('').reverse().join('')) hasPalindrome = true;
+                }
+            }
+        }
+        if (hasPalindrome) {
+            breakdown.push({ desc: '包含回文子串', points: 50 });
+            totalScore += 50;
+        }
+        
+        // 6位互不相同（仅当长度为6且没有下划线即无空格）
+        if (wordLength === 6 && !word.includes('_')) {
+            if (new Set(word.split('')).size === 6) {
+                breakdown.push({ desc: '6 位字母互不相同', points: 70 });
+                totalScore += 70;
+            }
+        }
+        
+        // 元音计数
+        let vowelCount = 0;
+        for (const c of letters) { if (VOWELS.has(c)) vowelCount++; }
+        if (vowelCount > 0) {
+            breakdown.push({ desc: `包含 ${vowelCount} 个元音字母`, points: vowelCount * 40 });
+            totalScore += vowelCount * 40;
+        }
+        
+        // 非特殊字母排名加分
+        const specialSet = new Set(specialLetters);
+        let posScore = 0;
+        const posDetails = [];
+        for (const c of letters) {
+            if (!specialSet.has(c)) {
+                const rank = c.charCodeAt(0) - 96;
+                posScore += rank;
+                posDetails.push(`${c}(${rank})`);
+            }
+        }
+        if (posScore > 0) {
+            breakdown.push({ desc: `普通字母排名加分: ${posDetails.join(' + ')}`, points: posScore });
+            totalScore += posScore;
+        }
+        
+        // 自由补充规则
+        // 整词回文
+        if (letters.length >= 3 && letters === letters.split('').reverse().join('')) {
+            breakdown.push({ desc: '✨ 整个单词为回文', points: 300 });
+            totalScore += 300;
+        }
+        
+        // 首尾相同
+        if (letters.length >= 2 && letters[0] === letters[letters.length - 1]) {
+            breakdown.push({ desc: '首尾字母相同', points: 30 });
+            totalScore += 30;
+        }
+        
+        // 纯辅音
+        if (letters.length > 0 && vowelCount === 0) {
+            breakdown.push({ desc: '✨ 纯辅音单词', points: 100 });
+            totalScore += 100;
+        }
+        
+        // 包含 "gg"
+        if (word.includes('gg')) {
+            breakdown.push({ desc: '包含 "gg"（Good Game!）', points: 66 });
+            totalScore += 66;
+        }
+        
+        // 字母半区
+        if (letters.length >= 3) {
+            if ([...letters].every(c => c.charCodeAt(0) <= 109)) {
+                breakdown.push({ desc: '所有字母来自前半字母表 (a-m)', points: 60 });
+                totalScore += 60;
+            }
+            if ([...letters].every(c => c.charCodeAt(0) >= 110)) {
+                breakdown.push({ desc: '所有字母来自后半字母表 (n-z)', points: 60 });
+                totalScore += 60;
+            }
+        }
+        
+        // 元音辅音交替
+        if (letters.length >= 4) {
+            let alt = true;
+            for (let i = 1; i < letters.length; i++) {
+                if (VOWELS.has(letters[i]) === VOWELS.has(letters[i - 1])) { alt = false; break; }
+            }
+            if (alt) {
+                breakdown.push({ desc: '✨ 元音辅音完美交替', points: 120 });
+                totalScore += 120;
+            }
+        }
+        
+        showResults(totalScore, breakdown);
+    }
+    
+    // 显示评分和动画（保留原版风格）
+    function showResults(totalScore, breakdown) {
+        let rating, ratingClass;
+        if (totalScore < 70) { rating = 'TRASH'; ratingClass = 'rating-TRASH'; }
+        else if (totalScore < 150) { rating = 'COMMON'; ratingClass = 'rating-COMMON'; }
+        else if (totalScore < 450) { rating = 'RARE'; ratingClass = 'rating-RARE'; }
+        else if (totalScore < 800) { rating = 'EPIC'; ratingClass = 'rating-EPIC'; }
+        else { rating = 'MYTHIC'; ratingClass = 'rating-MYTHIC'; }
+        
+        setTimeout(() => {
+            const el = document.getElementById('rating');
+            el.textContent = rating;
+            el.className = ratingClass + ' fade-in';
+        }, 200);
+        
+        setTimeout(() => {
+            const el = document.getElementById('score');
+            el.className = 'fade-in';
+            let cur = 0;
+            const step = Math.max(1, Math.floor(totalScore / 40));
+            const iv = setInterval(() => {
+                cur += step;
+                if (cur >= totalScore) { cur = totalScore; clearInterval(iv); }
+                el.textContent = `${cur} points`;
+            }, 25);
+        }, 600);
+        
+        setTimeout(() => {
+            const btn = document.getElementById('restart-btn');
+            btn.style.display = 'inline-block';
+            btn.className = 'btn fade-in';
+        }, 1000);
+        
+        setTimeout(() => {
+            const el = document.getElementById('breakdown');
+            el.className = 'fade-in';
+            el.innerHTML = '<h3>📊 得分明细</h3>';
+            breakdown.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'breakdown-item';
+                div.innerHTML = `<span>${item.desc}</span><span class="points">+ ${item.points}</span>`;
+                el.appendChild(div);
+            });
+            const total = document.createElement('div');
+            total.className = 'breakdown-item';
+            total.style.cssText = 'border-top:2px solid #667eea;margin-top:8px;padding-top:8px;font-weight:bold;';
+            total.innerHTML = `<span>总计</span><span class="points">${totalScore} points</span>`;
+            el.appendChild(total);
+        }, 1200);
+    }
+    
+    function restart() {
+        document.getElementById('result-screen').style.display = 'none';
+        document.getElementById('main-screen').style.display = 'block';
+        generated = [];
+        // 注意：重启时不清除预设单词的缓存，保证“下一次生成”的定义仍遵循setNextWord的设置
+        // 因为预设单词未实际使用，所以保留_ nextFixedWordRaw 原样
+    }
+</script>
 </body>
 </html>
