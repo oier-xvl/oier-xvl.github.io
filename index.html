@@ -373,7 +373,7 @@
             const randomChar = CHARS[Math.floor(Math.random() * CHARS.length)];
             // 临时显示随机字符（空格会显示为特殊临时样式？为视觉舒适，简单显示为空格符）
             if (randomChar === ' ') {
-                charSpan.textContent = '␣';
+                charSpan.textContent = ' ';
             } else {
                 charSpan.textContent = randomChar;
             }
@@ -402,11 +402,11 @@
                 if (finalChar === ' ') {
                     if (!wordStarted) {
                         // 单词尚未开始: 显示␣ (空格占位符)
-                        charSpan.textContent = '␣';
+                        charSpan.textContent = ' ';
                         slot.classList.add('space-char');
                     } else {
                         // 单词已经开始后出现空格: 显示 _ (代表单词内分隔)
-                        charSpan.textContent = '_';
+                        charSpan.textContent = ' ';
                         slot.classList.add('underscore-char');
                     }
                 } else {
@@ -419,7 +419,7 @@
                 // 延迟进入下一位 (营造逐个揭示感)
                 setTimeout(() => generateSequence(index + 1, fixedChars), 300);
             }
-        }, 60);
+        }, 30);
     }
     
     // ---------- 评分系统 (完全保留原有逻辑，但适配generated数组可能包含空格和字母) ----------
@@ -429,9 +429,7 @@
         
         for (let i = 0; i < 6; i++) {
             const c = generated[i];
-            if (c === ' ') {
-                if (wordStarted) word += '_';
-            } else {
+            if (c != ' ') {
                 wordStarted = true;
                 word += c;
             }
@@ -452,7 +450,7 @@
         }
         
         // 长度得分
-        const lengthScores = { 6: 10, 5: 20, 4: 40, 3: 80, 2: 160, 1: 320 };
+        const lengthScores = { 6: 10, 5: 20, 4: 50, 3: 100, 2: 200, 1: 500 };
         const pts = lengthScores[wordLength] || 10;
         breakdown.push({ desc: `单词长度为 ${wordLength}`, points: pts });
         totalScore += pts;
@@ -465,7 +463,7 @@
         for (const letter of specialLetters) {
             if (letters.includes(letter)) {
                 breakdown.push({ desc: `包含字母 "${letter}"`, points: 50 });
-                totalScore += 50;
+                totalScore += 30;
             }
         }
         
@@ -473,7 +471,6 @@
         const letterRuns = word.split('_').filter(r => r.length > 0);
         let hasConsec = [false, false, false, false]; // 3,4,5,6
         let hasSame = [false, false, false, false];
-        
         for (const run of letterRuns) {
             for (let len = 3; len <= Math.min(6, run.length); len++) {
                 for (let i = 0; i <= run.length - len; i++) {
@@ -497,7 +494,7 @@
             }
         }
         
-        const consecScores = [100, 500, 1000, 10000];
+        const consecScores = [80, 200, 500, 999];
         const consecLabels = [3, 4, 5, 6];
         for (let i = 0; i < 4; i++) {
             if (hasConsec[i]) {
@@ -521,16 +518,48 @@
             }
         }
         if (hasPalindrome) {
-            breakdown.push({ desc: '包含回文子串', points: 50 });
-            totalScore += 50;
+            breakdown.push({ desc: '包含回文子串', points: 30 });
+            totalScore += 30;
         }
         
-        // 6位互不相同（仅当长度为6且没有下划线即无空格）
-        if (wordLength === 6 && !word.includes('_')) {
-            if (new Set(word.split('')).size === 6) {
-                breakdown.push({ desc: '6 位字母互不相同', points: 70 });
-                totalScore += 70;
-            }
+        if (new Set(word.split('')).size === wordLength) {
+            breakdown.push({ desc: '所有字母互不相同', points: 30 });
+            totalScore += 30;
+        }
+        // 字母配对
+        if (letters.includes('i') && letters.includes('j') && letters.includes('i')) {
+            breakdown.push({ desc: '同时包含 i,j,k', points: 100 });
+            totalScore += 100;
+        }
+
+        if (letters.includes('x') && letters.includes('y') && letters.includes('z')) {
+            breakdown.push({ desc: '同时包含 x,y,z', points: 100 });
+            totalScore += 100;
+        }
+
+        if (letters.includes('a') && letters.includes('b') && letters.includes('c')) {
+            breakdown.push({ desc: '同时包含 a,b,c', points: 100 });
+            totalScore += 100;
+        }
+
+        if (letters.includes('l') && letters.includes('r')) {
+            breakdown.push({ desc: '同时包含 l,r', points: 60 });
+            totalScore += 60;
+        }
+
+        if (letters.includes('p') && letters.includes('q')) {
+            breakdown.push({ desc: '同时包含 p,q', points: 60 });
+            totalScore += 60;
+        }
+
+        if (letters.includes('u') && letters.includes('v')) {
+            breakdown.push({ desc: '同时包含 u,v', points: 60 });
+            totalScore += 60;
+        }
+
+        if (letters.includes('s') && letters.includes('t')) {
+            breakdown.push({ desc: '同时包含 us,t', points: 60 });
+            totalScore += 60;
         }
         
         // 元音计数
@@ -560,8 +589,8 @@
         // 自由补充规则
         // 整词回文
         if (letters.length >= 3 && letters === letters.split('').reverse().join('')) {
-            breakdown.push({ desc: '✨ 整个单词为回文', points: 300 });
-            totalScore += 300;
+            breakdown.push({ desc: '✨ 整个单词为回文', points: 150 });
+            totalScore += 150;
         }
         
         // 首尾相同
@@ -572,8 +601,13 @@
         
         // 纯辅音
         if (letters.length > 0 && vowelCount === 0) {
-            breakdown.push({ desc: '✨ 纯辅音单词', points: 100 });
-            totalScore += 100;
+            breakdown.push({ desc: '纯辅音单词', points: 50 });
+            totalScore += 50;
+        }
+
+        if (letters.length > 0 && vowelCount === wordLength) {
+            breakdown.push({ desc: '✨ 纯元音单词', points: 200 });
+            totalScore += 200;
         }
         
         // 包含 "gg"
@@ -585,12 +619,12 @@
         // 字母半区
         if (letters.length >= 3) {
             if ([...letters].every(c => c.charCodeAt(0) <= 109)) {
-                breakdown.push({ desc: '所有字母来自前半字母表 (a-m)', points: 60 });
-                totalScore += 60;
+                breakdown.push({ desc: '所有字母来自前半字母表 (a-m)', points: 30 });
+                totalScore += 30;
             }
             if ([...letters].every(c => c.charCodeAt(0) >= 110)) {
-                breakdown.push({ desc: '所有字母来自后半字母表 (n-z)', points: 60 });
-                totalScore += 60;
+                breakdown.push({ desc: '所有字母来自后半字母表 (n-z)', points: 30 });
+                totalScore += 30;
             }
         }
         
@@ -601,8 +635,8 @@
                 if (VOWELS.has(letters[i]) === VOWELS.has(letters[i - 1])) { alt = false; break; }
             }
             if (alt) {
-                breakdown.push({ desc: '✨ 元音辅音完美交替', points: 120 });
-                totalScore += 120;
+                breakdown.push({ desc: '✨ 元音辅音完美交替', points: 150 });
+                totalScore += 150;
             }
         }
         
@@ -613,9 +647,9 @@
     function showResults(totalScore, breakdown) {
         let rating, ratingClass;
         if (totalScore < 70) { rating = 'TRASH'; ratingClass = 'rating-TRASH'; }
-        else if (totalScore < 150) { rating = 'COMMON'; ratingClass = 'rating-COMMON'; }
-        else if (totalScore < 450) { rating = 'RARE'; ratingClass = 'rating-RARE'; }
-        else if (totalScore < 800) { rating = 'EPIC'; ratingClass = 'rating-EPIC'; }
+        else if (totalScore < 120) { rating = 'COMMON'; ratingClass = 'rating-COMMON'; }
+        else if (totalScore < 300) { rating = 'RARE'; ratingClass = 'rating-RARE'; }
+        else if (totalScore < 500) { rating = 'EPIC'; ratingClass = 'rating-EPIC'; }
         else { rating = 'MYTHIC'; ratingClass = 'rating-MYTHIC'; }
         
         setTimeout(() => {
@@ -669,4 +703,4 @@
     }
 </script>
 </body>
-</html>
+</html> 
