@@ -166,8 +166,8 @@
             }
         }
         if (hasPalindrome) {
-            breakdown.push({ desc: '包含回文子串', points: 4099 });
-            totalScore += 4099;
+            breakdown.push({ desc: '包含回文子串', points: 3333 });
+            totalScore += 3333;
         }
         
         if (new Set(word.split('')).size === wordLength) {
