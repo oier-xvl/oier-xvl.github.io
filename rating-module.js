@@ -27,8 +27,14 @@
 
 #score {
     font-size: 1.8rem;
-    margin: 10px 0;
+    margin: 10px 0 4px;
     color: #ccc;
+}
+
+#total-score {
+    font-size: 1.2rem;
+    margin: 4px 0 10px;
+    color: #aaa;
 }
 
 #breakdown {
@@ -85,9 +91,8 @@
         let word = '';
         
         for (let i = 0; i < 6; i++) {
-            const c = generated[i];
-            if (c != ' ') {
-                wordStarted = true;
+            const c = characters[i];
+            if (c !== ' ') {
                 word += c;
             }
         }
@@ -103,7 +108,6 @@
             breakdown.push({ desc: '单词长度为 0（奇迹！）', points: 888888 });
             totalScore = 888888;
             return { word, totalScore, breakdown, ...getRating(totalScore) };
-            return;
         }
         
         // 长度得分
@@ -288,10 +292,20 @@
         return { word, totalScore, breakdown, ...getRating(totalScore) };
     }
 
+    function getStoredTotalScore() {
+        const storedScore = Number(localStorage.getItem('wordGeneratorTotalScore'));
+        return Number.isFinite(storedScore) ? storedScore : 0;
+    }
+
+    function saveStoredTotalScore(totalScore) {
+        localStorage.setItem('wordGeneratorTotalScore', String(totalScore));
+    }
+
     function renderResult(result, elements) {
         const wordTextEl = elements.wordText;
         const ratingEl = elements.rating;
         const scoreEl = elements.score;
+        const totalScoreEl = elements.totalScore;
         const restartBtn = elements.restartButton;
         const breakdownEl = elements.breakdown;
 
@@ -308,7 +322,14 @@
             const step = Math.max(1, Math.floor(result.totalScore / 40));
             const iv = setInterval(() => {
                 cur += step;
-                if (cur >= result.totalScore) { cur = result.totalScore; clearInterval(iv); }
+                if (cur >= result.totalScore) {
+                    cur = result.totalScore;
+                    clearInterval(iv);
+                    const storedTotalScore = getStoredTotalScore() + result.totalScore;
+                    saveStoredTotalScore(storedTotalScore);
+                    totalScoreEl.textContent = `总得分：${storedTotalScore} points`;
+                    totalScoreEl.className = 'fade-in';
+                }
                 scoreEl.textContent = `${cur} points`;
             }, 25);
         }, 600);
@@ -345,6 +366,8 @@
         ensureStyles,
         scoreCharacters,
         renderResult,
+        getStoredTotalScore,
+        saveStoredTotalScore,
         mount
     };
 

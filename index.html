@@ -162,6 +162,7 @@
         <div class="word-text" id="word-text"></div>
         <div id="rating"></div>
         <div id="score"></div>
+        <div id="total-score"></div>
         <button class="btn" id="restart-btn" style="display:none;">RESTART</button>
         <div id="breakdown"></div>
     </div>
@@ -253,6 +254,7 @@
         document.getElementById('result-screen').style.display = 'block';
         document.getElementById('rating').textContent = '';
         document.getElementById('score').textContent = '';
+        document.getElementById('total-score').textContent = '';
         document.getElementById('breakdown').innerHTML = '';
         document.getElementById('restart-btn').style.display = 'none';
         document.getElementById('word-text').textContent = '';
@@ -373,6 +375,7 @@
                 wordText: document.getElementById('word-text'),
                 rating: document.getElementById('rating'),
                 score: document.getElementById('score'),
+                totalScore: document.getElementById('total-score'),
                 restartButton: document.getElementById('restart-btn'),
                 breakdown: document.getElementById('breakdown')
             }
