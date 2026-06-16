@@ -443,14 +443,15 @@
         
         // 长度为0奇迹处理
         if (wordLength === 0) {
-            breakdown.push({ desc: '单词长度为 0（奇迹！）', points: 88888 });
-            totalScore = 88888;
+            breakdown.push({ desc: '单词长度为 0（奇迹！）', points: 888888 });
+            totalScore = 888888;
             showResults(totalScore, breakdown);
             return;
         }
         
         // 长度得分
-        const lengthScores = { 6: 10, 5: 20, 4: 50, 3: 100, 2: 200, 1: 500 };
+        const lengthScores = { 6: 250, 5: 888, 4: 3000, 3: 7878, 2: 91919, 1: 137891 };
+        
         const pts = lengthScores[wordLength] || 10;
         breakdown.push({ desc: `单词长度为 ${wordLength}`, points: pts });
         totalScore += pts;
@@ -464,8 +465,8 @@
             if (letters.includes(letter)) {
                 let cnt = 0;
                 for (const tmp of letters) { if (tmp == letter) cnt++; }
-                breakdown.push({ desc: `包含字母 "${letter}" ${cnt} 个`, points: 30 * cnt});
-                totalScore += 30 * cnt;
+                breakdown.push({ desc: `包含字母 "${letter}" ${cnt} 个`, points: 1500 * cnt});
+                totalScore += 1500 * cnt;
             }
         }
         
@@ -495,8 +496,7 @@
                 }
             }
         }
-        
-        const consecScores = [80, 200, 500, 999];
+        const consecScores = [4046, 6666, 11451, 24999];
         const consecLabels = [3, 4, 5, 6];
         for (let i = 0; i < 4; i++) {
             if (hasConsec[i]) {
@@ -520,56 +520,56 @@
             }
         }
         if (hasPalindrome) {
-            breakdown.push({ desc: '包含回文子串', points: 30 });
-            totalScore += 30;
+            breakdown.push({ desc: '包含回文子串', points: 4301 });
+            totalScore += 4301;
         }
         
         if (new Set(word.split('')).size === wordLength) {
-            breakdown.push({ desc: '所有字母互不相同', points: 30 });
-            totalScore += 30;
+            breakdown.push({ desc: '所有字母互不相同', points: 2046 });
+            totalScore += 2046;
         }
         // 字母配对
         if (letters.includes('i') && letters.includes('j') && letters.includes('k')) {
-            breakdown.push({ desc: '同时包含 i,j,k', points: 100 });
-            totalScore += 100;
+            breakdown.push({ desc: '同时包含 i,j,k', points: 9999 });
+            totalScore += 9999;
         }
 
         if (letters.includes('x') && letters.includes('y') && letters.includes('z')) {
-            breakdown.push({ desc: '同时包含 x,y,z', points: 100 });
-            totalScore += 100;
+            breakdown.push({ desc: '同时包含 x,y,z', points: 9999 });
+            totalScore += 9999;
         }
 
         if (letters.includes('a') && letters.includes('b') && letters.includes('c')) {
-            breakdown.push({ desc: '同时包含 a,b,c', points: 100 });
-            totalScore += 100;
+            breakdown.push({ desc: '同时包含 a,b,c', points: 9999 });
+            totalScore += 9999;
         }
 
         if (letters.includes('l') && letters.includes('r')) {
-            breakdown.push({ desc: '同时包含 l,r', points: 60 });
-            totalScore += 60;
+            breakdown.push({ desc: '同时包含 l,r', points: 4999 });
+            totalScore += 4999;
         }
 
         if (letters.includes('p') && letters.includes('q')) {
-            breakdown.push({ desc: '同时包含 p,q', points: 60 });
-            totalScore += 60;
+            breakdown.push({ desc: '同时包含 p,q', points: 4999 });
+            totalScore += 4999;
         }
 
         if (letters.includes('u') && letters.includes('v')) {
-            breakdown.push({ desc: '同时包含 u,v', points: 60 });
-            totalScore += 60;
+            breakdown.push({ desc: '同时包含 u,v', points: 4999 });
+            totalScore += 4999;
         }
 
         if (letters.includes('s') && letters.includes('t')) {
-            breakdown.push({ desc: '同时包含 s,t', points: 60 });
-            totalScore += 60;
+            breakdown.push({ desc: '同时包含 s,t', points: 4999 });
+            totalScore += 4999;
         }
         
         // 元音计数
         let vowelCount = 0;
         for (const c of letters) { if (VOWELS.has(c)) vowelCount++; }
         if (vowelCount > 0) {
-            breakdown.push({ desc: `包含 ${vowelCount} 个元音字母`, points: vowelCount * 40 });
-            totalScore += vowelCount * 40;
+            breakdown.push({ desc: `包含 ${vowelCount} 个元音字母`, points: vowelCount * 2000 });
+            totalScore += vowelCount * 2000;
         }
         
         // 非特殊字母排名加分
@@ -584,49 +584,49 @@
             }
         }
         if (posScore > 0) {
-            breakdown.push({ desc: `普通字母排名加分: ${posDetails.join(' + ')}`, points: posScore });
-            totalScore += posScore;
+            breakdown.push({ desc: `普通字母排名加分: ${posDetails.join(' + ')}`, points: posScore * 10});
+            totalScore += posScore * 10;
         }
         
         // 自由补充规则
         // 整词回文
         if (letters.length >= 3 && letters === letters.split('').reverse().join('')) {
-            breakdown.push({ desc: '✨ 整个单词为回文', points: 150 });
-            totalScore += 150;
+            breakdown.push({ desc: '✨ 整个单词为回文', points: 4000 });
+            totalScore += 4000;
         }
         
         // 首尾相同
         if (letters.length >= 2 && letters[0] === letters[letters.length - 1]) {
-            breakdown.push({ desc: '首尾字母相同', points: 30 });
-            totalScore += 30;
+            breakdown.push({ desc: '首尾字母相同', points: 1649 });
+            totalScore += 1649;
         }
         
         // 纯辅音
         if (letters.length > 0 && vowelCount === 0) {
-            breakdown.push({ desc: '纯辅音单词', points: 50 });
-            totalScore += 50;
+            breakdown.push({ desc: '纯辅音单词', points: 2549 });
+            totalScore += 2549;
         }
 
         if (letters.length > 0 && vowelCount === wordLength) {
-            breakdown.push({ desc: '✨ 纯元音单词', points: 200 });
-            totalScore += 200;
+            breakdown.push({ desc: '✨ 纯元音单词', points: 8888 });
+            totalScore += 8888;
         }
         
         // 包含 "gg"
         if (word.includes('gg')) {
-            breakdown.push({ desc: '包含 "gg"（Good Game!）', points: 66 });
-            totalScore += 66;
+            breakdown.push({ desc: '包含 "gg"（Good Game!）', points: 3099 });
+            totalScore += 3099;
         }
         
         // 字母半区
         if (letters.length >= 3) {
             if ([...letters].every(c => c.charCodeAt(0) <= 109)) {
-                breakdown.push({ desc: '所有字母来自前半字母表 (a-m)', points: 30 });
-                totalScore += 30;
+                breakdown.push({ desc: '所有字母来自前半字母表 (a-m)', points: 1145 });
+                totalScore += 1145;
             }
             if ([...letters].every(c => c.charCodeAt(0) >= 110)) {
-                breakdown.push({ desc: '所有字母来自后半字母表 (n-z)', points: 30 });
-                totalScore += 30;
+                breakdown.push({ desc: '所有字母来自后半字母表 (n-z)', points: 1145 });
+                totalScore += 1145;
             }
         }
         
@@ -637,8 +637,8 @@
                 if (VOWELS.has(letters[i]) === VOWELS.has(letters[i - 1])) { alt = false; break; }
             }
             if (alt) {
-                breakdown.push({ desc: '✨ 元音辅音完美交替', points: 150 });
-                totalScore += 150;
+                breakdown.push({ desc: '✨ 元音辅音完美交替', points: 6666 });
+                totalScore += 6666;
             }
         }
         
@@ -648,10 +648,10 @@
     // 显示评分和动画（保留原版风格）
     function showResults(totalScore, breakdown) {
         let rating, ratingClass;
-        if (totalScore < 130) { rating = 'TRASH'; ratingClass = 'rating-TRASH'; }
-        else if (totalScore < 180) { rating = 'COMMON'; ratingClass = 'rating-COMMON'; }
-        else if (totalScore < 250) { rating = 'RARE'; ratingClass = 'rating-RARE'; }
-        else if (totalScore < 450) { rating = 'EPIC'; ratingClass = 'rating-EPIC'; }
+        if (totalScore < 2000) { rating = 'TRASH'; ratingClass = 'rating-TRASH'; }
+        else if (totalScore < 5000) { rating = 'COMMON'; ratingClass = 'rating-COMMON'; }
+        else if (totalScore < 10000) { rating = 'RARE'; ratingClass = 'rating-RARE'; }
+        else if (totalScore < 25000) { rating = 'EPIC'; ratingClass = 'rating-EPIC'; }
         else { rating = 'MYTHIC'; ratingClass = 'rating-MYTHIC'; }
         
         setTimeout(() => {
