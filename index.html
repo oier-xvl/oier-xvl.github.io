@@ -462,8 +462,10 @@
         const specialLetters = ['a', 'b', 'c', 'x', 'y', 'z'];
         for (const letter of specialLetters) {
             if (letters.includes(letter)) {
-                breakdown.push({ desc: `包含字母 "${letter}"`, points: 50 });
-                totalScore += 30;
+                let cnt = 0;
+                for (const tmp of letters) { if (tmp == letter) cnt++; }
+                breakdown.push({ desc: `包含字母 "${letter}" ${cnt} 个`, points: 30 * cnt});
+                totalScore += 30 * cnt;
             }
         }
         
@@ -527,7 +529,7 @@
             totalScore += 30;
         }
         // 字母配对
-        if (letters.includes('i') && letters.includes('j') && letters.includes('i')) {
+        if (letters.includes('i') && letters.includes('j') && letters.includes('k')) {
             breakdown.push({ desc: '同时包含 i,j,k', points: 100 });
             totalScore += 100;
         }
@@ -558,7 +560,7 @@
         }
 
         if (letters.includes('s') && letters.includes('t')) {
-            breakdown.push({ desc: '同时包含 us,t', points: 60 });
+            breakdown.push({ desc: '同时包含 s,t', points: 60 });
             totalScore += 60;
         }
         
@@ -646,10 +648,10 @@
     // 显示评分和动画（保留原版风格）
     function showResults(totalScore, breakdown) {
         let rating, ratingClass;
-        if (totalScore < 70) { rating = 'TRASH'; ratingClass = 'rating-TRASH'; }
-        else if (totalScore < 120) { rating = 'COMMON'; ratingClass = 'rating-COMMON'; }
-        else if (totalScore < 300) { rating = 'RARE'; ratingClass = 'rating-RARE'; }
-        else if (totalScore < 500) { rating = 'EPIC'; ratingClass = 'rating-EPIC'; }
+        if (totalScore < 130) { rating = 'TRASH'; ratingClass = 'rating-TRASH'; }
+        else if (totalScore < 180) { rating = 'COMMON'; ratingClass = 'rating-COMMON'; }
+        else if (totalScore < 250) { rating = 'RARE'; ratingClass = 'rating-RARE'; }
+        else if (totalScore < 450) { rating = 'EPIC'; ratingClass = 'rating-EPIC'; }
         else { rating = 'MYTHIC'; ratingClass = 'rating-MYTHIC'; }
         
         setTimeout(() => {
