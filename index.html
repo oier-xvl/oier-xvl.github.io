@@ -459,17 +459,6 @@
         // 仅字母部分 (去掉下划线占位符)
         const letters = word.replace(/_/g, '');
         
-        // 特殊字母 a,b,c,x,y,z
-        const specialLetters = ['a', 'b', 'c', 'x', 'y', 'z'];
-        for (const letter of specialLetters) {
-            if (letters.includes(letter)) {
-                let cnt = 0;
-                for (const tmp of letters) { if (tmp == letter) cnt++; }
-                breakdown.push({ desc: `包含字母 "${letter}" ${cnt} 个`, points: 1500 * cnt});
-                totalScore += 1500 * cnt;
-            }
-        }
-        
         // 连续模式检测（字母表连续 / 相同字母）
         const letterRuns = word.split('_').filter(r => r.length > 0);
         let hasConsec = [false, false, false, false]; // 3,4,5,6
@@ -520,8 +509,8 @@
             }
         }
         if (hasPalindrome) {
-            breakdown.push({ desc: '包含回文子串', points: 4301 });
-            totalScore += 4301;
+            breakdown.push({ desc: '包含回文子串', points: 4099 });
+            totalScore += 4099;
         }
         
         if (new Set(word.split('')).size === wordLength) {
@@ -568,23 +557,20 @@
         let vowelCount = 0;
         for (const c of letters) { if (VOWELS.has(c)) vowelCount++; }
         if (vowelCount > 0) {
-            breakdown.push({ desc: `包含 ${vowelCount} 个元音字母`, points: vowelCount * 2000 });
-            totalScore += vowelCount * 2000;
+            breakdown.push({ desc: `包含 ${vowelCount} 个元音字母`, points: vowelCount * 1888 });
+            totalScore += vowelCount * 1888;
         }
         
         // 非特殊字母排名加分
-        const specialSet = new Set(specialLetters);
         let posScore = 0;
         const posDetails = [];
         for (const c of letters) {
-            if (!specialSet.has(c)) {
-                const rank = c.charCodeAt(0) - 96;
-                posScore += rank;
-                posDetails.push(`${c}(${rank})`);
-            }
+            const rank = c.charCodeAt(0) - 96;
+            posScore += rank;
+            posDetails.push(`${c}(${rank})`);
         }
         if (posScore > 0) {
-            breakdown.push({ desc: `普通字母排名加分: ${posDetails.join(' + ')}`, points: posScore * 10});
+            breakdown.push({ desc: `字母排名加分: ${posDetails.join(' + ')}`, points: posScore * 10});
             totalScore += posScore * 10;
         }
         
@@ -614,8 +600,8 @@
         
         // 包含 "gg"
         if (word.includes('gg')) {
-            breakdown.push({ desc: '包含 "gg"（Good Game!）', points: 3099 });
-            totalScore += 3099;
+            breakdown.push({ desc: '包含 "gg"（Good Game!）', points: 3999 });
+            totalScore += 3999;
         }
         
         // 字母半区
