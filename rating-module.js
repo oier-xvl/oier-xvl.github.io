@@ -68,10 +68,10 @@
     }
 
     function getRating(totalScore) {
-        if (totalScore < 1500) return { rating: 'TRASH', ratingClass: 'rating-TRASH' };
+        if (totalScore < 2000) return { rating: 'TRASH', ratingClass: 'rating-TRASH' };
         if (totalScore < 3000) return { rating: 'COMMON', ratingClass: 'rating-COMMON' };
-        if (totalScore < 8000) return { rating: 'RARE', ratingClass: 'rating-RARE' };
-        if (totalScore < 15000) return { rating: 'EPIC', ratingClass: 'rating-EPIC' };
+        if (totalScore < 10000) return { rating: 'RARE', ratingClass: 'rating-RARE' };
+        if (totalScore < 18000) return { rating: 'EPIC', ratingClass: 'rating-EPIC' };
         return { rating: 'MYTHIC', ratingClass: 'rating-MYTHIC' };
     }
 
@@ -214,8 +214,8 @@
         let vowelCount = 0;
         for (const c of letters) { if (VOWELS.has(c)) vowelCount++; }
         if (vowelCount > 0) {
-            breakdown.push({ desc: `包含 ${vowelCount} 个元音字母`, points: vowelCount * 1888 });
-            totalScore += vowelCount * 1888;
+            breakdown.push({ desc: `包含 ${vowelCount} 个元音字母`, points: vowelCount * 1333 });
+            totalScore += vowelCount * 1333;
         }
         
         // 非特殊字母排名加分
@@ -246,7 +246,7 @@
         
         // 纯辅音
         if (letters.length > 0 && vowelCount === 0) {
-            breakdown.push({ desc: '纯辅音单词', points: 2549 });
+            breakdown.push({ desc: '纯辅音单词', points: 2111 });
             totalScore += 2549;
         }
 
