@@ -247,7 +247,7 @@
         // 纯辅音
         if (letters.length > 0 && vowelCount === 0) {
             breakdown.push({ desc: '纯辅音单词', points: 2111 });
-            totalScore += 2549;
+            totalScore += 2111;
         }
 
         if (letters.length > 0 && vowelCount === wordLength) {
