@@ -547,7 +547,7 @@
     let tenPullCost = 0;
 
     function initShop() {
-        tenPullCost = 10 * window.WordRating.RATING_THRESHOLDS.UNCOMMON;
+        tenPullCost = 10 * window.WordRating.RATING_THRESHOLDS.COMMON;
         tenPullCostSpan.textContent = tenPullCost;
         updateCurrencyDisplay();
         setInterval(updateCurrencyDisplay, 100); // 实时更新积分显示
