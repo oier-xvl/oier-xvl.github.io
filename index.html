@@ -20,6 +20,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            padding-right: 340px;
         }
 
         #app {
@@ -148,6 +149,137 @@
             z-index: 999;
             backdrop-filter: blur(4px);
         }
+
+        #history-panel {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            width: 300px;
+            max-height: calc(100vh - 48px);
+            background: rgba(26, 26, 46, 0.94);
+            border: 1px solid #33335a;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            text-align: left;
+            backdrop-filter: blur(6px);
+        }
+
+        #history-panel h2 {
+            padding: 16px 18px 10px;
+            color: #c7d2fe;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .history-empty {
+            padding: 0 18px 18px;
+            color: #777;
+            font-size: 0.9rem;
+        }
+
+        #history-list {
+            max-height: calc(100vh - 104px);
+            overflow-y: auto;
+            padding: 0 10px 12px;
+        }
+
+        .history-item {
+            width: 100%;
+            margin-top: 8px;
+            padding: 10px;
+            background: #111124;
+            border: 1px solid #29294a;
+            border-radius: 8px;
+            color: #eee;
+            font-family: 'Courier New', monospace;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .history-item:hover,
+        .history-item.expanded {
+            border-color: #667eea;
+            box-shadow: 0 0 12px rgba(102, 126, 234, 0.25);
+        }
+
+        .history-summary {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 6px 10px;
+            align-items: center;
+        }
+
+        .history-word {
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            white-space: pre;
+        }
+
+        .history-score {
+            color: #b7c0ff;
+            font-size: 0.85rem;
+        }
+
+        .history-rating {
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .history-time {
+            color: #777;
+            font-size: 0.75rem;
+            text-align: right;
+        }
+
+        .history-breakdown {
+            display: none;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #2b2b4d;
+        }
+
+        .history-item.expanded .history-breakdown {
+            display: block;
+        }
+
+        .history-breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 4px 0;
+            color: #bbb;
+            font-size: 0.78rem;
+        }
+
+        .history-breakdown-row .points {
+            color: #4caf50;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 1060px) {
+            body {
+                padding-right: 0;
+                align-items: flex-start;
+            }
+
+            #app {
+                margin-top: 24px;
+            }
+
+            #history-panel {
+                position: static;
+                width: min(700px, calc(100% - 40px));
+                max-height: none;
+                margin: 20px auto;
+            }
+
+            #history-list {
+                max-height: 360px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -167,6 +299,10 @@
         <div id="breakdown"></div>
     </div>
 </div>
+<aside id="history-panel" aria-label="历史抽取记录">
+    <h2>历史抽取记录</h2>
+    <div id="history-list"></div>
+</aside>
 
 <script src="rating-module.js"></script>
 <script>
@@ -239,6 +375,10 @@
     // ---------- DOM 元素绑定 ----------
     const generateBtn = document.getElementById('generate-btn');
     const restartBtn = document.getElementById('restart-btn');
+    
+    const historyList = document.getElementById('history-list');
+    const HISTORY_STORAGE_KEY = 'wordGeneratorHistory';
+    const HISTORY_LIMIT = 100;
     
     generateBtn.addEventListener('click', startGeneration);
     restartBtn.addEventListener('click', restart);
@@ -369,7 +509,7 @@
     
     // ---------- 评分系统接入 ----------
     function processResult() {
-        window.WordRating.mount({
+        const result = window.WordRating.mount({
             characters: generated,
             elements: {
                 wordText: document.getElementById('word-text'),
@@ -380,7 +520,130 @@
                 breakdown: document.getElementById('breakdown')
             }
         });
+        addHistoryRecord(result);
     }
+
+    function getHistoryWord(characters) {
+        let wordStarted = false;
+        return characters.map(char => {
+            if (char === ' ') {
+                return wordStarted ? '_' : ' ';
+            }
+            wordStarted = true;
+            return char;
+        }).join('');
+    }
+
+    function loadHistoryRecords() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed.slice(0, HISTORY_LIMIT) : [];
+        } catch (error) {
+            console.warn('历史抽取记录读取失败，已重置为空列表', error);
+            return [];
+        }
+    }
+
+    function saveHistoryRecords(records) {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(records.slice(0, HISTORY_LIMIT)));
+    }
+
+    function addHistoryRecord(result) {
+        const records = loadHistoryRecords();
+        const record = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            timestamp: new Date().toISOString(),
+            word: getHistoryWord(generated),
+            score: result.totalScore,
+            rating: result.rating,
+            ratingClass: result.ratingClass,
+            breakdown: result.breakdown.map(item => ({
+                desc: item.desc,
+                points: item.points
+            }))
+        };
+
+        records.unshift(record);
+        saveHistoryRecords(records);
+        renderHistoryRecords(records);
+    }
+
+    function renderHistoryRecords(records = loadHistoryRecords()) {
+        historyList.innerHTML = '';
+
+        if (records.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'history-empty';
+            empty.textContent = '暂无记录';
+            historyList.appendChild(empty);
+            return;
+        }
+
+        records.forEach(record => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'history-item';
+            item.setAttribute('aria-expanded', 'false');
+
+            const summary = document.createElement('div');
+            summary.className = 'history-summary';
+
+            const word = document.createElement('span');
+            word.className = 'history-word';
+            word.textContent = record.word;
+
+            const score = document.createElement('span');
+            score.className = 'history-score';
+            score.textContent = `${record.score} pts`;
+
+            const rating = document.createElement('span');
+            rating.className = `history-rating ${record.ratingClass || ''}`;
+            rating.textContent = record.rating;
+
+            const time = document.createElement('span');
+            time.className = 'history-time';
+            time.textContent = new Date(record.timestamp).toLocaleString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            summary.append(word, score, rating, time);
+
+            const breakdown = document.createElement('div');
+            breakdown.className = 'history-breakdown';
+            (record.breakdown || []).forEach(detail => {
+                const row = document.createElement('div');
+                row.className = 'history-breakdown-row';
+
+                const desc = document.createElement('span');
+                desc.textContent = detail.desc;
+
+                const points = document.createElement('span');
+                points.className = 'points';
+                points.textContent = `+ ${detail.points}`;
+
+                row.append(desc, points);
+                breakdown.appendChild(row);
+            });
+
+            const total = document.createElement('div');
+            total.className = 'history-breakdown-row';
+            total.style.fontWeight = 'bold';
+            total.innerHTML = `<span>总计</span><span class="points">${record.score} points</span>`;
+            breakdown.appendChild(total);
+
+            item.append(summary, breakdown);
+            item.addEventListener('click', () => {
+                const expanded = item.classList.toggle('expanded');
+                item.setAttribute('aria-expanded', String(expanded));
+            });
+            historyList.appendChild(item);
+        });
+    }
+
+    renderHistoryRecords();
     
     function restart() {
         document.getElementById('result-screen').style.display = 'none';
