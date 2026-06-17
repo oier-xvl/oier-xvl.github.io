@@ -149,6 +149,83 @@
             backdrop-filter: blur(4px);
         }
 
+        #shop-panel {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            width: 300px;
+            max-height: calc(100vh - 48px);
+            background: rgba(26, 26, 46, 0.94);
+            border: 1px solid #33335a;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            text-align: left;
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #currency-display {
+            padding: 16px 18px;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid #33335a;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-align: center;
+        }
+
+        #shop-panel h2 {
+            padding: 16px 18px 10px;
+            color: #c7d2fe;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        #shop-list {
+            padding: 0 10px 12px;
+            overflow-y: auto;
+        }
+
+        .shop-item {
+            width: 100%;
+            margin-top: 8px;
+            padding: 12px;
+            background: #111124;
+            border: 1px solid #29294a;
+            border-radius: 8px;
+            color: #eee;
+            font-family: 'Courier New', monospace;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .shop-item:hover:not(:disabled) {
+            border-color: #4fc3f7;
+            box-shadow: 0 0 12px rgba(79, 195, 247, 0.25);
+        }
+
+        .shop-item:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #29294a;
+            box-shadow: none;
+        }
+
+        .shop-item-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .shop-item-cost {
+            font-size: 0.9rem;
+            color: #ff6b6b;
+        }
+
         #history-panel {
             position: fixed;
             top: 24px;
@@ -331,7 +408,8 @@
             }
 
             #history-panel,
-            #extreme-panel {
+            #extreme-panel,
+            #shop-panel {
                 position: static;
                 width: min(700px, calc(100% - 40px));
                 max-height: none;
@@ -362,6 +440,18 @@
         <div id="breakdown"></div>
     </div>
 </div>
+<aside id="shop-panel" aria-label="商店">
+    <div id="currency-display">
+        总积分: <span id="total-currency">0</span>
+    </div>
+    <h2>商店</h2>
+    <div id="shop-list">
+        <button class="shop-item" id="btn-ten-pull">
+            <div class="shop-item-title">十连抽</div>
+            <div class="shop-item-cost">消耗: <span id="ten-pull-cost">0</span> 积分</div>
+        </button>
+    </div>
+</aside>
 <aside id="history-panel" aria-label="历史抽取记录">
     <h2>历史抽取记录</h2>
     <div id="history-list"></div>
@@ -450,6 +540,118 @@
     
     generateBtn.addEventListener('click', startGeneration);
     restartBtn.addEventListener('click', restart);
+
+    // ---------- 商店与货币系统 ----------
+    const btnTenPull = document.getElementById('btn-ten-pull');
+    const tenPullCostSpan = document.getElementById('ten-pull-cost');
+    let tenPullCost = 0;
+
+    function initShop() {
+        tenPullCost = 10 * window.WordRating.RATING_THRESHOLDS.UNCOMMON;
+        tenPullCostSpan.textContent = tenPullCost;
+        updateCurrencyDisplay();
+        setInterval(updateCurrencyDisplay, 100); // 实时更新积分显示
+    }
+
+    function updateCurrencyDisplay() {
+        const total = window.WordRating.getStoredTotalScore();
+        document.getElementById('total-currency').textContent = total;
+        
+        if (total >= tenPullCost) {
+            btnTenPull.disabled = false;
+        } else {
+            btnTenPull.disabled = true;
+        }
+    }
+
+    btnTenPull.addEventListener('click', () => {
+        const currentTotal = window.WordRating.getStoredTotalScore();
+        if (currentTotal < tenPullCost) {
+            alert(`积分不足！需要 ${tenPullCost} 积分，当前只有 ${currentTotal} 积分。`);
+            return;
+        }
+        
+        // 扣除积分
+        window.WordRating.saveStoredTotalScore(currentTotal - tenPullCost);
+        updateCurrencyDisplay();
+        
+        performTenPull();
+    });
+
+    function performTenPull() {
+        // 切换界面
+        document.getElementById('main-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('rating').textContent = '';
+        document.getElementById('score').textContent = '';
+        document.getElementById('total-score').textContent = '';
+        document.getElementById('breakdown').innerHTML = '';
+        document.getElementById('restart-btn').style.display = 'none';
+        document.getElementById('word-text').textContent = '';
+        
+        const wordDisplay = document.getElementById('word-display');
+        wordDisplay.innerHTML = '';
+        for (let i = 0; i < 6; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'char-slot revealed';
+            slot.id = `slot-${i}`;
+            slot.innerHTML = '<span class="slot-char"></span>';
+            wordDisplay.appendChild(slot);
+        }
+        
+        let lastResult = null;
+        let lastChars = null;
+        
+        for (let i = 0; i < 10; i++) {
+            const chars = [];
+            for (let j = 0; j < 6; j++) {
+                chars.push(CHARS[Math.floor(Math.random() * CHARS.length)]);
+            }
+            
+            const result = window.WordRating.scoreCharacters(chars);
+            generated = chars;
+            addHistoryRecord(result);
+            
+            if (i < 9) {
+                const newTotal = window.WordRating.getStoredTotalScore() + result.totalScore;
+                window.WordRating.saveStoredTotalScore(newTotal);
+            } else {
+                lastResult = result;
+                lastChars = chars;
+            }
+        }
+        
+        generated = lastChars;
+        
+        let wordStarted = false;
+        for (let i = 0; i < 6; i++) {
+            const slot = document.getElementById(`slot-${i}`);
+            const charSpan = slot.querySelector('.slot-char');
+            const char = lastChars[i];
+            
+            if (char === ' ') {
+                if (!wordStarted) {
+                    charSpan.textContent = ' ';
+                    slot.classList.add('space-char');
+                } else {
+                    charSpan.textContent = ' ';
+                    slot.classList.add('underscore-char');
+                }
+            } else {
+                charSpan.textContent = char;
+                wordStarted = true;
+            }
+        }
+        
+        window.WordRating.renderResult(lastResult, {
+            wordText: document.getElementById('word-text'),
+            rating: document.getElementById('rating'),
+            score: document.getElementById('score'),
+            totalScore: document.getElementById('total-score'),
+            restartButton: document.getElementById('restart-btn'),
+            breakdown: document.getElementById('breakdown')
+        });
+    }
     
     // ---------- 核心生成逻辑（支持预设固定单词，且只影响下一次） ----------
     /**
@@ -771,6 +973,7 @@
 
     renderHistoryRecords();
     renderExtremeRecords();
+    initShop();
     
     function restart() {
         document.getElementById('result-screen').style.display = 'none';
