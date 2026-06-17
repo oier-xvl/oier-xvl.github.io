@@ -290,7 +290,6 @@
                 totalScore += 6666;
             }
         }
-
         return { word, totalScore, breakdown, ...getRating(totalScore) };
     }
 
