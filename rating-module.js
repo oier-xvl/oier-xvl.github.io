@@ -74,12 +74,20 @@
         document.head.appendChild(style);
     }
 
+    const RATING_THRESHOLDS = {
+        TRASH: 2800,
+        COMMON: 5000,
+        UNCOMMON: 9000,
+        RARE: 14000,
+        EPIC: 20000
+    };
+
     function getRating(totalScore) {
-        if (totalScore < 2800) return { rating: 'TRASH', ratingClass: 'rating-TRASH' };
-        if (totalScore < 5000) return { rating: 'COMMON', ratingClass: 'rating-COMMON' };
-        if (totalScore < 9000) return { rating: 'UNCOMMON', ratingClass: 'rating-UNCOMMON' };
-        if (totalScore < 14000) return { rating: 'RARE', ratingClass: 'rating-RARE' };
-        if (totalScore < 20000) return { rating: 'EPIC', ratingClass: 'rating-EPIC' };
+        if (totalScore < RATING_THRESHOLDS.TRASH) return { rating: 'TRASH', ratingClass: 'rating-TRASH' };
+        if (totalScore < RATING_THRESHOLDS.COMMON) return { rating: 'COMMON', ratingClass: 'rating-COMMON' };
+        if (totalScore < RATING_THRESHOLDS.UNCOMMON) return { rating: 'UNCOMMON', ratingClass: 'rating-UNCOMMON' };
+        if (totalScore < RATING_THRESHOLDS.RARE) return { rating: 'RARE', ratingClass: 'rating-RARE' };
+        if (totalScore < RATING_THRESHOLDS.EPIC) return { rating: 'EPIC', ratingClass: 'rating-EPIC' };
         return { rating: 'MYTHIC', ratingClass: 'rating-MYTHIC' };
     }
 
@@ -364,6 +372,7 @@
     }
 
     window.WordRating = {
+        RATING_THRESHOLDS,
         ensureStyles,
         scoreCharacters,
         renderResult,
