@@ -74,9 +74,9 @@
     }
 
     function getRating(totalScore) {
-        if (totalScore < 2000) return { rating: 'TRASH', ratingClass: 'rating-TRASH' };
-        if (totalScore < 3000) return { rating: 'COMMON', ratingClass: 'rating-COMMON' };
-        if (totalScore < 10000) return { rating: 'RARE', ratingClass: 'rating-RARE' };
+        if (totalScore < 2800) return { rating: 'TRASH', ratingClass: 'rating-TRASH' };
+        if (totalScore < 5000) return { rating: 'COMMON', ratingClass: 'rating-COMMON' };
+        if (totalScore < 9000) return { rating: 'RARE', ratingClass: 'rating-RARE' };
         if (totalScore < 18000) return { rating: 'EPIC', ratingClass: 'rating-EPIC' };
         return { rating: 'MYTHIC', ratingClass: 'rating-MYTHIC' };
     }
