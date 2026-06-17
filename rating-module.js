@@ -18,7 +18,7 @@
 .rating-COMMON { color: #aaa; }
 .rating-UNCOMMON { color: #4ff74f; text-shadow: 0 0 20px #4ff74f; }
 .rating-RARE { color: #4fc3f7; text-shadow: 0 0 20px #4fc3f7; }
-.rating-EPIC { color: #ab47bc; text-shadow: 0 0 20px #ab47bc; }
+.rating-EPIC { color: #ec83ff; text-shadow: 0 0 20px #ec83ff; }
 .rating-MYTHIC { color: #ffd700; animation: mythicGlow 2s ease-in-out infinite; }
 
 @keyframes mythicGlow {
