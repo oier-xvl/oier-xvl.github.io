@@ -612,10 +612,10 @@
             generated = chars;
             addHistoryRecord(result);
             
-            if (i < 9) {
-                const newTotal = window.WordRating.getStoredTotalScore() + result.totalScore;
-                window.WordRating.saveStoredTotalScore(newTotal);
-            } else {
+            const newTotal = window.WordRating.getStoredTotalScore() + result.totalScore;
+            window.WordRating.saveStoredTotalScore(newTotal);
+            
+            if (i === 9) {
                 lastResult = result;
                 lastChars = chars;
             }
@@ -643,14 +643,39 @@
             }
         }
         
-        window.WordRating.renderResult(lastResult, {
-            wordText: document.getElementById('word-text'),
-            rating: document.getElementById('rating'),
-            score: document.getElementById('score'),
-            totalScore: document.getElementById('total-score'),
-            restartButton: document.getElementById('restart-btn'),
-            breakdown: document.getElementById('breakdown')
+        // 静态显示最后一次结果，跳过动画
+        document.getElementById('word-text').textContent = `「${lastResult.word || '(空)'}」`;
+        
+        const ratingEl = document.getElementById('rating');
+        ratingEl.textContent = lastResult.rating;
+        ratingEl.className = lastResult.ratingClass;
+        
+        const scoreEl = document.getElementById('score');
+        scoreEl.textContent = `${lastResult.totalScore} points`;
+        scoreEl.className = '';
+        
+        const totalScoreEl = document.getElementById('total-score');
+        totalScoreEl.textContent = `总得分：${window.WordRating.getStoredTotalScore()} points`;
+        totalScoreEl.className = '';
+        
+        const restartBtn = document.getElementById('restart-btn');
+        restartBtn.style.display = 'inline-block';
+        restartBtn.className = 'btn';
+        
+        const breakdownEl = document.getElementById('breakdown');
+        breakdownEl.className = '';
+        breakdownEl.innerHTML = '<h3>📊 得分明细</h3>';
+        lastResult.breakdown.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'breakdown-item';
+            div.innerHTML = `<span>${item.desc}</span><span class="points">+ ${item.points}</span>`;
+            breakdownEl.appendChild(div);
         });
+        const total = document.createElement('div');
+        total.className = 'breakdown-item';
+        total.style.cssText = 'border-top:2px solid #667eea;margin-top:8px;padding-top:8px;font-weight:bold;';
+        total.innerHTML = `<span>总计</span><span class="points">${lastResult.totalScore} points</span>`;
+        breakdownEl.appendChild(total);
     }
     
     // ---------- 核心生成逻辑（支持预设固定单词，且只影响下一次） ----------
