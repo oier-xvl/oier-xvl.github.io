@@ -107,13 +107,13 @@
         
         // 长度为0奇迹处理
         if (wordLength === 0) {
-            breakdown.push({ desc: '单词长度为 0（奇迹！）', points: 888888 });
-            totalScore = 888888;
+            breakdown.push({ desc: '单词长度为 0（奇迹！）', points: 88888888 });
+            totalScore = 88888888;
             return { word, totalScore, breakdown, ...getRating(totalScore) };
         }
         
         // 长度得分
-        const lengthScores = { 6: 250, 5: 888, 4: 3000, 3: 7878, 2: 91919, 1: 137891 };
+        const lengthScores = { 6: 250, 5: 888, 4: 6789, 3: 43299, 2: 114514, 1: 1919810 };
         
         const pts = lengthScores[wordLength] || 10;
         breakdown.push({ desc: `单词长度为 ${wordLength}`, points: pts });
