@@ -16,6 +16,7 @@
 
 .rating-TRASH { color: #666; }
 .rating-COMMON { color: #aaa; }
+.rating-UNCOMMON { color: #4ff74f; text-shadow: 0 0 20px #4ff74f; }
 .rating-RARE { color: #4fc3f7; text-shadow: 0 0 20px #4fc3f7; }
 .rating-EPIC { color: #ab47bc; text-shadow: 0 0 20px #ab47bc; }
 .rating-MYTHIC { color: #ffd700; animation: mythicGlow 2s ease-in-out infinite; }
@@ -76,7 +77,8 @@
     function getRating(totalScore) {
         if (totalScore < 2800) return { rating: 'TRASH', ratingClass: 'rating-TRASH' };
         if (totalScore < 5000) return { rating: 'COMMON', ratingClass: 'rating-COMMON' };
-        if (totalScore < 9000) return { rating: 'RARE', ratingClass: 'rating-RARE' };
+        if (totalScore < 7000) return { rating: 'UNCOMMON', ratingClass: 'rating-UNCOMMON' };
+        if (totalScore < 12000) return { rating: 'RARE', ratingClass: 'rating-RARE' };
         if (totalScore < 18000) return { rating: 'EPIC', ratingClass: 'rating-EPIC' };
         return { rating: 'MYTHIC', ratingClass: 'rating-MYTHIC' };
     }
