@@ -156,7 +156,7 @@
                 }
             }
         }
-        const consecScores = [4046, 6666, 11451, 24999];
+        const consecScores = [5555, 7891, 11451, 24999];
         const consecLabels = [3, 4, 5, 6];
         for (let i = 0; i < 4; i++) {
             if (hasConsec[i]) {
