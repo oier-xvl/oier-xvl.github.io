@@ -75,8 +75,8 @@
     }
 
     const RATING_THRESHOLDS = {
-        TRASH: 2800,
-        COMMON: 5000,
+        TRASH: 2100,
+        COMMON: 5200,
         UNCOMMON: 9000,
         RARE: 14000,
         EPIC: 20000
