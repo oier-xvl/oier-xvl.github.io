@@ -121,7 +121,7 @@
         }
         
         // 长度得分
-        const lengthScores = { 6: 249, 5: 888, 4: 9876, 3: 43299, 2: 114514, 1: 1919810 };
+        const lengthScores = { 6: 250, 5: 888, 4: 9876, 3: 43299, 2: 114514, 1: 1919810 };
         
         const pts = lengthScores[wordLength] || 10;
         breakdown.push({ desc: `单词长度为 ${wordLength}`, points: pts });
