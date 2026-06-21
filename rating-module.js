@@ -156,7 +156,7 @@
                 }
             }
         }
-        const consecScores = [5555, 7891, 11451, 24999];
+        const consecScores = [5555, 11451, 78910, 249999];
         const consecLabels = [3, 4, 5, 6];
         for (let i = 0; i < 4; i++) {
             if (hasConsec[i]) {
@@ -246,6 +246,14 @@
         }
         
         // 自由补充规则
+        //连续相同
+        for(let i=0; i<letters.length-1; i++) {
+            if (letters[i] === letters[i + 1]) {
+                breakdown.push({ desc: `连续相同字母: ${letters[i]}`, points: 1012 });
+                totalScore += 1012;
+            }
+        }
+
         // 整词回文
         if (letters.length >= 3 && letters === letters.split('').reverse().join('')) {
             breakdown.push({ desc: '✨ 整个单词为回文', points: 8888 });
