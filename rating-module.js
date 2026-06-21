@@ -249,8 +249,9 @@
         //连续相同
         for(let i=0; i<letters.length-1; i++) {
             if (letters[i] === letters[i + 1]) {
-                breakdown.push({ desc: `连续相同字母: ${letters[i]}`, points: 1012 });
-                totalScore += 1012;
+                const rank = letters[i].charCodeAt(0) - 96;
+                breakdown.push({ desc: `连续相同字母: ${letters[i]}(${rank})`, points: 12 * rank });
+                totalScore += 12 * rank;
             }
         }
 
