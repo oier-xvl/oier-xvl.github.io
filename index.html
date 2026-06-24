@@ -32,6 +32,7 @@
         h1 {
             font-size: 2.5rem;
             margin-bottom: 40px;
+            color: #667eea; /* fallback */
             background: linear-gradient(135deg, #667eea, #764ba2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -146,6 +147,7 @@
             color: #8f8;
             pointer-events: none;
             z-index: 999;
+            -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
         }
 
@@ -161,6 +163,7 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
             overflow: hidden;
             text-align: left;
+            -webkit-backdrop-filter: blur(6px);
             backdrop-filter: blur(6px);
             display: flex;
             flex-direction: column;
@@ -238,6 +241,7 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
             overflow: hidden;
             text-align: left;
+            -webkit-backdrop-filter: blur(6px);
             backdrop-filter: blur(6px);
         }
 
@@ -347,6 +351,7 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
             overflow: hidden;
             text-align: left;
+            -webkit-backdrop-filter: blur(6px);
             backdrop-filter: blur(6px);
         }
 
@@ -538,6 +543,25 @@
     const HISTORY_STORAGE_KEY = 'wordGeneratorHistory';
     const HISTORY_LIMIT = 100;
     
+    let isGenerating = false;
+    let activeTimers = [];
+
+    function clearActiveTimers() {
+        activeTimers.forEach(timer => {
+            if (timer.type === 'interval') clearInterval(timer.id);
+            if (timer.type === 'timeout') clearTimeout(timer.id);
+        });
+        activeTimers = [];
+    }
+
+    function finishGeneration() {
+        isGenerating = false;
+        clearActiveTimers();
+        generateBtn.disabled = false;
+        restartBtn.disabled = false;
+        updateCurrencyDisplay();
+    }
+
     generateBtn.addEventListener('click', startGeneration);
     restartBtn.addEventListener('click', restart);
 
@@ -550,21 +574,20 @@
         tenPullCost = 10 * window.WordRating.RATING_THRESHOLDS.COMMON;
         tenPullCostSpan.textContent = tenPullCost;
         updateCurrencyDisplay();
-        setInterval(updateCurrencyDisplay, 100); // 实时更新积分显示
+        window.addEventListener('scoreChanged', updateCurrencyDisplay);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'wordGeneratorTotalScore') updateCurrencyDisplay();
+        });
     }
 
     function updateCurrencyDisplay() {
         const total = window.WordRating.getStoredTotalScore();
         document.getElementById('total-currency').textContent = total;
-        
-        if (total >= tenPullCost) {
-            btnTenPull.disabled = false;
-        } else {
-            btnTenPull.disabled = true;
-        }
+        btnTenPull.disabled = isGenerating || total < tenPullCost;
     }
 
     btnTenPull.addEventListener('click', () => {
+        if (isGenerating) return;
         const currentTotal = window.WordRating.getStoredTotalScore();
         if (currentTotal < tenPullCost) {
             alert(`积分不足！需要 ${tenPullCost} 积分，当前只有 ${currentTotal} 积分。`);
@@ -573,12 +596,18 @@
         
         // 扣除积分
         window.WordRating.saveStoredTotalScore(currentTotal - tenPullCost);
-        updateCurrencyDisplay();
         
         performTenPull();
     });
 
     function performTenPull() {
+        if (isGenerating) return;
+        isGenerating = true;
+        generateBtn.disabled = true;
+        restartBtn.disabled = true;
+        btnTenPull.disabled = true;
+        clearActiveTimers();
+
         // 切换界面
         document.getElementById('main-screen').style.display = 'none';
         document.getElementById('result-screen').style.display = 'block';
@@ -676,6 +705,7 @@
         total.style.cssText = 'border-top:2px solid #667eea;margin-top:8px;padding-top:8px;font-weight:bold;';
         total.innerHTML = `<span>总计</span><span class="points">${lastResult.totalScore} points</span>`;
         breakdownEl.appendChild(total);
+        finishGeneration();
     }
     
     // ---------- 核心生成逻辑（支持预设固定单词，且只影响下一次） ----------
@@ -684,6 +714,13 @@
      * 根据全局 _nextFixedWordRaw 决定是否使用固定字符，使用后立即清除预设。
      */
     function startGeneration() {
+        if (isGenerating) return;
+        isGenerating = true;
+        generateBtn.disabled = true;
+        restartBtn.disabled = true;
+        btnTenPull.disabled = true;
+        clearActiveTimers();
+
         // 1. 切换界面
         document.getElementById('main-screen').style.display = 'none';
         document.getElementById('result-screen').style.display = 'block';
@@ -760,6 +797,7 @@
             spinCount++;
             if (spinCount >= spinMax) {
                 clearInterval(spinInterval);
+                activeTimers = activeTimers.filter(timer => timer.id !== spinInterval);
                 
                 // ---------- 决定最终字符 ----------
                 let finalChar;
@@ -797,25 +835,35 @@
                 slot.classList.add('revealed');
                 
                 // 延迟进入下一位 (营造逐个揭示感)
-                setTimeout(() => generateSequence(index + 1, fixedChars), 300);
+                const nextTimer = setTimeout(() => {
+                    activeTimers = activeTimers.filter(timer => timer.id !== nextTimer);
+                    generateSequence(index + 1, fixedChars);
+                }, 300);
+                activeTimers.push({ id: nextTimer, type: 'timeout' });
             }
         }, 30);
+        activeTimers.push({ id: spinInterval, type: 'interval' });
     }
     
     // ---------- 评分系统接入 ----------
     function processResult() {
-        const result = window.WordRating.mount({
-            characters: generated,
-            elements: {
-                wordText: document.getElementById('word-text'),
-                rating: document.getElementById('rating'),
-                score: document.getElementById('score'),
-                totalScore: document.getElementById('total-score'),
-                restartButton: document.getElementById('restart-btn'),
-                breakdown: document.getElementById('breakdown')
-            }
-        });
+        const result = window.WordRating.scoreCharacters(generated);
+        const newTotal = window.WordRating.getStoredTotalScore() + result.totalScore;
+        window.WordRating.saveStoredTotalScore(newTotal);
         addHistoryRecord(result);
+        window.WordRating.renderResult(result, {
+            wordText: document.getElementById('word-text'),
+            rating: document.getElementById('rating'),
+            score: document.getElementById('score'),
+            totalScore: document.getElementById('total-score'),
+            restartButton: document.getElementById('restart-btn'),
+            breakdown: document.getElementById('breakdown')
+        }, newTotal);
+        const finishTimer = setTimeout(() => {
+            activeTimers = activeTimers.filter(timer => timer.id !== finishTimer);
+            finishGeneration();
+        }, 1300);
+        activeTimers.push({ id: finishTimer, type: 'timeout' });
     }
 
     function getHistoryWord(characters) {
@@ -840,7 +888,11 @@
     }
 
     function saveHistoryRecords(records) {
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(records.slice(0, HISTORY_LIMIT)));
+        try {
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(records.slice(0, HISTORY_LIMIT)));
+        } catch (error) {
+            console.warn('历史抽取记录保存失败', error);
+        }
     }
 
     function addHistoryRecord(result) {
@@ -1001,6 +1053,11 @@
     initShop();
     
     function restart() {
+        clearActiveTimers();
+        isGenerating = false;
+        generateBtn.disabled = false;
+        restartBtn.disabled = false;
+        updateCurrencyDisplay();
         document.getElementById('result-screen').style.display = 'none';
         document.getElementById('main-screen').style.display = 'block';
         generated = [];

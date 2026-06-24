@@ -108,7 +108,6 @@
         }
         
         const wordLength = word.length;
-        document.getElementById('word-text').textContent = `「${word || '(空)'}」`;
         
         const breakdown = [];
         let totalScore = 0;
@@ -127,37 +126,33 @@
         breakdown.push({ desc: `单词长度为 ${wordLength}`, points: pts });
         totalScore += pts;
         
-        // 仅字母部分 (去掉下划线占位符)
-        const letters = word.replace(/_/g, '');
+        const letters = word;
         
         // 连续模式检测（字母表连续 / 相同字母）
-        const letterRuns = word.split('_').filter(r => r.length > 0);
         let hasConsec = [false, false, false, false]; // 3,4,5,6
         let hasSame = [false, false, false, false];
-        for (const run of letterRuns) {
-            for (let len = 3; len <= Math.min(6, run.length); len++) {
-                for (let i = 0; i <= run.length - len; i++) {
-                    const sub = run.substring(i, i + len);
-                    
-                    // 字母表连续（升序或降序）
-                    let asc = true, desc = true;
-                    for (let j = 1; j < sub.length; j++) {
-                        if (sub.charCodeAt(j) - sub.charCodeAt(j - 1) !== 1) asc = false;
-                        if (sub.charCodeAt(j - 1) - sub.charCodeAt(j) !== 1) desc = false;
-                    }
-                    if (asc || desc) hasConsec[len - 3] = true;
-                    
-                    // 相同字母
-                    let same = true;
-                    for (let j = 1; j < sub.length; j++) {
-                        if (sub[j] !== sub[0]) { same = false; break; }
-                    }
-                    if (same) hasSame[len - 3] = true;
+        for (let len = 3; len <= Math.min(6, letters.length); len++) {
+            for (let i = 0; i <= letters.length - len; i++) {
+                const sub = letters.substring(i, i + len);
+                
+                // 字母表连续（升序或降序）
+                let asc = true, desc = true;
+                for (let j = 1; j < sub.length; j++) {
+                    if (sub.charCodeAt(j) - sub.charCodeAt(j - 1) !== 1) asc = false;
+                    if (sub.charCodeAt(j - 1) - sub.charCodeAt(j) !== 1) desc = false;
                 }
+                if (asc || desc) hasConsec[len - 3] = true;
+                
+                // 相同字母
+                let same = true;
+                for (let j = 1; j < sub.length; j++) {
+                    if (sub[j] !== sub[0]) { same = false; break; }
+                }
+                if (same) hasSame[len - 3] = true;
             }
         }
-        const consecScores = [999, 5555, 11451, 78910, 249999];
-        const consecLabels = [2, 3, 4, 5, 6];
+        const consecScores = [5555, 11451, 78910, 249999];
+        const consecLabels = [3, 4, 5, 6];
         for (let i = 0; i < 4; i++) {
             if (hasConsec[i]) {
                 breakdown.push({ desc: `连续 ${consecLabels[i]} 位字母在字母表中连续`, points: consecScores[i] });
@@ -171,12 +166,10 @@
         
         // 回文子串 (长度>=3)
         let hasPalindrome = false;
-        for (const run of letterRuns) {
-            for (let len = 3; len <= run.length && !hasPalindrome; len++) {
-                for (let i = 0; i <= run.length - len && !hasPalindrome; i++) {
-                    const sub = run.substring(i, i + len);
-                    if (sub === sub.split('').reverse().join('')) hasPalindrome = true;
-                }
+        for (let len = 3; len <= letters.length && !hasPalindrome; len++) {
+            for (let i = 0; i <= letters.length - len && !hasPalindrome; i++) {
+                const sub = letters.substring(i, i + len);
+                if (sub === sub.split('').reverse().join('')) hasPalindrome = true;
             }
         }
         if (hasPalindrome) {
@@ -265,7 +258,7 @@
             totalScore += 2111;
         }
 
-        if (letters.length > 0 && vowelCount === wordLength) {
+        if (letters.length > 0 && vowelCount === letters.length) {
             breakdown.push({ desc: '✨ 纯元音单词', points: 8888 });
             totalScore += 8888;
         }
@@ -303,15 +296,25 @@
     }
 
     function getStoredTotalScore() {
-        const storedScore = Number(localStorage.getItem('wordGeneratorTotalScore'));
-        return Number.isFinite(storedScore) ? storedScore : 0;
+        try {
+            const storedScore = Number(localStorage.getItem('wordGeneratorTotalScore'));
+            return Number.isFinite(storedScore) ? storedScore : 0;
+        } catch (e) {
+            console.warn('Failed to read total score', e);
+            return 0;
+        }
     }
 
     function saveStoredTotalScore(totalScore) {
-        localStorage.setItem('wordGeneratorTotalScore', String(totalScore));
+        try {
+            localStorage.setItem('wordGeneratorTotalScore', String(totalScore));
+            window.dispatchEvent(new CustomEvent('scoreChanged', { detail: totalScore }));
+        } catch (e) {
+            console.warn('Failed to save total score', e);
+        }
     }
 
-    function renderResult(result, elements) {
+    function renderResult(result, elements, finalTotalScore) {
         const wordTextEl = elements.wordText;
         const ratingEl = elements.rating;
         const scoreEl = elements.score;
@@ -335,9 +338,7 @@
                 if (cur >= result.totalScore) {
                     cur = result.totalScore;
                     clearInterval(iv);
-                    const storedTotalScore = getStoredTotalScore() + result.totalScore;
-                    saveStoredTotalScore(storedTotalScore);
-                    totalScoreEl.textContent = `总得分：${storedTotalScore} points`;
+                    totalScoreEl.textContent = `总得分：${finalTotalScore} points`;
                     totalScoreEl.className = 'fade-in';
                 }
                 scoreEl.textContent = `${cur} points`;
@@ -368,7 +369,9 @@
     function mount(options) {
         ensureStyles();
         const result = scoreCharacters(options.characters);
-        renderResult(result, options.elements);
+        const newTotal = getStoredTotalScore() + result.totalScore;
+        saveStoredTotalScore(newTotal);
+        renderResult(result, options.elements, newTotal);
         return result;
     }
 
