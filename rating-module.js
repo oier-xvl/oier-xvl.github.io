@@ -156,8 +156,8 @@
                 }
             }
         }
-        const consecScores = [5555, 11451, 78910, 249999];
-        const consecLabels = [3, 4, 5, 6];
+        const consecScores = [999, 5555, 11451, 78910, 249999];
+        const consecLabels = [2, 3, 4, 5, 6];
         for (let i = 0; i < 4; i++) {
             if (hasConsec[i]) {
                 breakdown.push({ desc: `连续 ${consecLabels[i]} 位字母在字母表中连续`, points: consecScores[i] });
@@ -246,14 +246,6 @@
         }
         
         // 自由补充规则
-        //连续相同
-        for(let i=0; i<letters.length-1; i++) {
-            if (letters[i] === letters[i + 1]) {
-                const rank = letters[i].charCodeAt(0) - 96;
-                breakdown.push({ desc: `连续相同字母: ${letters[i]}(${rank})`, points: 12 * rank });
-                totalScore += 12 * rank;
-            }
-        }
 
         // 整词回文
         if (letters.length >= 3 && letters === letters.split('').reverse().join('')) {
