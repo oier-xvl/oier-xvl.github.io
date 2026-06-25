@@ -129,9 +129,9 @@
         const letters = word;
         
         // 连续模式检测（字母表连续 / 相同字母）
-        let hasConsec = [false, false, false, false]; // 3,4,5,6
-        let hasSame = [false, false, false, false];
-        for (let len = 3; len <= Math.min(6, letters.length); len++) {
+        let hasConsec = [false, false, false, false, false]; // 2,3,4,5,6
+        let hasSame = [false, false, false, false, false];
+        for (let len = 2; len <= Math.min(6, letters.length); len++) {
             for (let i = 0; i <= letters.length - len; i++) {
                 const sub = letters.substring(i, i + len);
                 
@@ -151,9 +151,9 @@
                 if (same) hasSame[len - 3] = true;
             }
         }
-        const consecScores = [5555, 11451, 78910, 249999];
-        const consecLabels = [3, 4, 5, 6];
-        for (let i = 0; i < 4; i++) {
+        const consecScores = [1111, 5555, 11451, 78910, 249999];
+        const consecLabels = [2, 3, 4, 5, 6];
+        for (let i = 0; i < 5; i++) {
             if (hasConsec[i]) {
                 breakdown.push({ desc: `连续 ${consecLabels[i]} 位字母在字母表中连续`, points: consecScores[i] });
                 totalScore += consecScores[i];
