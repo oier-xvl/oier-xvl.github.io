@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="word.png">
-    <title>Word Generator</title>
+    <link rel="icon" type="image/png" href="games/wordle/word.png">
+    <title>游戏合集大厅</title>
     <style>
         * {
             margin: 0;
@@ -13,1057 +13,177 @@
         }
 
         body {
-            font-family: 'Courier New', monospace;
-            background: #0a0a1a;
-            color: #eee;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+            color: #f5f7ff;
+            background:
+                radial-gradient(circle at top left, rgba(102, 126, 234, 0.32), transparent 34rem),
+                radial-gradient(circle at bottom right, rgba(245, 87, 108, 0.22), transparent 30rem),
+                #0a0a1a;
         }
 
-        #app {
-            text-align: center;
-            width: 100%;
-            max-width: 700px;
-            padding: 20px;
+        .page {
+            width: min(1120px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 64px 0;
+        }
+
+        .hero {
+            margin-bottom: 36px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border: 1px solid rgba(183, 192, 255, 0.25);
+            border-radius: 999px;
+            color: #c7d2fe;
+            background: rgba(17, 17, 36, 0.72);
+            letter-spacing: 1px;
+            font-size: 0.95rem;
         }
 
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 40px;
-            color: #667eea; /* fallback */
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin-top: 22px;
+            font-size: clamp(2.5rem, 7vw, 5.4rem);
+            line-height: 1;
+            letter-spacing: 0.08em;
+            background: linear-gradient(135deg, #c7d2fe, #818cf8 48%, #f0abfc);
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             background-clip: text;
-            letter-spacing: 4px;
+            -webkit-text-fill-color: transparent;
         }
 
-        .btn {
-            padding: 16px 48px;
-            font-size: 1.3rem;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            letter-spacing: 2px;
+        .subtitle {
+            max-width: 680px;
+            margin-top: 18px;
+            color: #aab0d5;
+            font-size: 1.08rem;
+            line-height: 1.8;
         }
 
-        #generate-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        #generate-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.6);
-        }
-
-        #restart-btn {
-            background: linear-gradient(135deg, #f093fb, #f5576c);
-            color: white;
-            box-shadow: 0 4px 20px rgba(245, 87, 108, 0.4);
-            margin: 20px 0;
-        }
-
-        #restart-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(245, 87, 108, 0.6);
-        }
-
-        #word-display {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin: 40px 0 30px;
-        }
-
-        .char-slot {
-            width: 60px;
-            height: 70px;
-            background: #1a1a2e;
-            border: 2px solid #333;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-
-        .char-slot.active {
-            border-color: #667eea;
-            box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
-        }
-
-        .char-slot.revealed {
-            border-color: #764ba2;
-            background: #1e1e3a;
-        }
-
-        .char-slot.space-char {
-            border-color: #444;
-            background: #111;
-            color: #666;
-        }
-
-        .char-slot.underscore-char {
-            border-color: #f5576c;
-            color: #f5576c;
-        }
-
-        #result-screen { display: none; }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .word-text {
-            font-size: 1.2rem;
-            color: #888;
-            margin-top: 10px;
-            letter-spacing: 2px;
-        }
-        
-        .console-tip {
-            position: fixed;
-            bottom: 12px;
-            left: 12px;
-            background: rgba(0,0,0,0.6);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-family: monospace;
-            color: #8f8;
-            pointer-events: none;
-            z-index: 999;
-            -webkit-backdrop-filter: blur(4px);
-            backdrop-filter: blur(4px);
-        }
-
-        #shop-panel {
-            position: fixed;
-            top: 24px;
-            left: 24px;
-            width: 300px;
-            max-height: calc(100vh - 48px);
-            background: rgba(26, 26, 46, 0.94);
-            border: 1px solid #33335a;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-            overflow: hidden;
-            text-align: left;
-            -webkit-backdrop-filter: blur(6px);
-            backdrop-filter: blur(6px);
-            display: flex;
-            flex-direction: column;
-        }
-
-        #currency-display {
-            padding: 16px 18px;
-            background: rgba(0, 0, 0, 0.2);
-            border-bottom: 1px solid #33335a;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #ffd700;
-            text-align: center;
-        }
-
-        #shop-panel h2 {
-            padding: 16px 18px 10px;
-            color: #c7d2fe;
-            font-size: 1rem;
-            letter-spacing: 1px;
-        }
-
-        #shop-list {
-            padding: 0 10px 12px;
-            overflow-y: auto;
-        }
-
-        .shop-item {
-            width: 100%;
-            margin-top: 8px;
-            padding: 12px;
-            background: #111124;
-            border: 1px solid #29294a;
-            border-radius: 8px;
-            color: #eee;
-            font-family: 'Courier New', monospace;
-            text-align: left;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .shop-item:hover:not(:disabled) {
-            border-color: #4fc3f7;
-            box-shadow: 0 0 12px rgba(79, 195, 247, 0.25);
-        }
-
-        .shop-item:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            border-color: #29294a;
-            box-shadow: none;
-        }
-
-        .shop-item-title {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 4px;
-        }
-
-        .shop-item-cost {
-            font-size: 0.9rem;
-            color: #ff6b6b;
-        }
-
-        #history-panel {
-            position: fixed;
-            top: 24px;
-            right: 24px;
-            width: 300px;
-            max-height: calc(100vh - 260px);
-            background: rgba(26, 26, 46, 0.94);
-            border: 1px solid #33335a;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-            overflow: hidden;
-            text-align: left;
-            -webkit-backdrop-filter: blur(6px);
-            backdrop-filter: blur(6px);
-        }
-
-        #history-panel h2 {
-            padding: 16px 18px 10px;
-            color: #c7d2fe;
-            font-size: 1rem;
-            letter-spacing: 1px;
-        }
-
-        .history-empty {
-            padding: 0 18px 18px;
-            color: #777;
-            font-size: 0.9rem;
-        }
-
-        #history-list {
-            max-height: calc(100vh - 104px);
-            overflow-y: auto;
-            padding: 0 10px 12px;
-        }
-
-        .history-item {
-            width: 100%;
-            margin-top: 8px;
-            padding: 10px;
-            background: #111124;
-            border: 1px solid #29294a;
-            border-radius: 8px;
-            color: #eee;
-            font-family: 'Courier New', monospace;
-            text-align: left;
-            cursor: pointer;
-        }
-
-        .history-item:hover,
-        .history-item.expanded {
-            border-color: #667eea;
-            box-shadow: 0 0 12px rgba(102, 126, 234, 0.25);
-        }
-
-        .history-summary {
+        .games-grid {
             display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 6px 10px;
-            align-items: center;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 22px;
         }
 
-        .history-word {
-            color: #fff;
-            font-size: 1.05rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-            white-space: pre;
-        }
-
-        .history-score {
-            color: #b7c0ff;
-            font-size: 0.85rem;
-        }
-
-        .history-rating {
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-
-        .history-time {
-            color: #777;
-            font-size: 0.75rem;
-            text-align: right;
-        }
-
-        .history-breakdown {
-            display: none;
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px solid #2b2b4d;
-        }
-
-        .history-item.expanded .history-breakdown {
-            display: block;
-        }
-
-        .history-breakdown-row {
+        .game-card {
             display: flex;
+            min-height: 220px;
+            flex-direction: column;
             justify-content: space-between;
-            gap: 10px;
-            padding: 4px 0;
-            color: #bbb;
-            font-size: 0.78rem;
-        }
-
-        .history-breakdown-row .points {
-            color: #4caf50;
-            white-space: nowrap;
-        }
-
-        #extreme-panel {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
-            width: 300px;
-            max-height: 188px;
-            background: rgba(26, 26, 46, 0.94);
-            border: 1px solid #33335a;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            padding: 24px;
+            border: 1px solid rgba(183, 192, 255, 0.18);
+            border-radius: 22px;
+            color: inherit;
+            text-decoration: none;
+            background: linear-gradient(145deg, rgba(26, 26, 46, 0.92), rgba(17, 17, 36, 0.86));
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+            transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
             overflow: hidden;
-            text-align: left;
-            -webkit-backdrop-filter: blur(6px);
-            backdrop-filter: blur(6px);
+            position: relative;
         }
 
-        #extreme-panel h2 {
-            padding: 12px 14px 6px;
-            color: #c7d2fe;
-            font-size: 0.95rem;
+        .game-card::after {
+            content: "";
+            position: absolute;
+            inset: auto -40px -70px auto;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.2);
+            filter: blur(4px);
+        }
+
+        .game-card:hover,
+        .game-card:focus-visible {
+            transform: translateY(-6px);
+            border-color: rgba(129, 140, 248, 0.75);
+            box-shadow: 0 26px 80px rgba(102, 126, 234, 0.22);
+            outline: none;
+        }
+
+        .game-icon {
+            width: 92px;
+            height: 46px;
+            object-fit: contain;
+            object-position: left center;
+            image-rendering: auto;
+            margin-bottom: 22px;
+        }
+
+        .game-title {
+            font-size: 1.6rem;
+            margin-bottom: 10px;
             letter-spacing: 1px;
         }
 
-        #extreme-list {
-            max-height: 138px;
-            overflow-y: auto;
-            padding: 0 10px 10px;
+        .game-desc {
+            color: #aab0d5;
+            line-height: 1.7;
         }
 
-        .extreme-item {
-            width: 100%;
-            margin-top: 8px;
-            padding: 8px;
-            background: #111124;
-            border: 1px solid #29294a;
-            border-radius: 8px;
-            color: #eee;
-            font-family: 'Courier New', monospace;
-            text-align: left;
-            cursor: pointer;
+        .game-action {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            margin-top: 24px;
+            padding: 10px 16px;
+            border-radius: 12px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-weight: 700;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
         }
 
-        .extreme-item:hover,
-        .extreme-item.expanded {
-            border-color: #f093fb;
-            box-shadow: 0 0 12px rgba(240, 147, 251, 0.25);
+        .empty-card {
+            min-height: 220px;
+            padding: 24px;
+            border: 1px dashed rgba(183, 192, 255, 0.22);
+            border-radius: 22px;
+            color: #777fa8;
+            background: rgba(17, 17, 36, 0.42);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.7;
         }
 
-        .extreme-label {
-            color: #f0abfc;
-            font-size: 0.78rem;
-            font-weight: bold;
-        }
-
-        .extreme-item .history-breakdown {
-            max-height: 160px;
-            overflow-y: auto;
-        }
-
-        .extreme-item.expanded .history-breakdown {
-            display: block;
-        }
-
-        @media (max-width: 1060px) {
-            body {
-                padding-right: 0;
-                align-items: flex-start;
-            }
-
-            #app {
-                margin-top: 24px;
-            }
-
-            #history-panel,
-            #extreme-panel,
-            #shop-panel {
-                position: static;
-                width: min(700px, calc(100% - 40px));
-                max-height: none;
-                margin: 20px auto;
-            }
-
-            #history-list,
-            #extreme-list {
-                max-height: 360px;
-            }
+        footer {
+            margin-top: 42px;
+            color: #6f7598;
+            font-size: 0.92rem;
         }
     </style>
 </head>
 <body>
-<div id="app">
-    <div id="main-screen">
-        <h1>WORD GENERATOR</h1>
-        <p style="color:#888; margin-bottom:30px;">随机生成 6 位字符并评分</p>
-        <button class="btn" id="generate-btn">生 成</button>
-    </div>
-    <div id="result-screen">
-        <div id="word-display"></div>
-        <div class="word-text" id="word-text"></div>
-        <div id="rating"></div>
-        <div id="score"></div>
-        <div id="total-score"></div>
-        <button class="btn" id="restart-btn" style="display:none;">RESTART</button>
-        <div id="breakdown"></div>
-    </div>
-</div>
-<aside id="shop-panel" aria-label="商店">
-    <div id="currency-display">
-        总积分: <span id="total-currency">0</span>
-    </div>
-    <h2>商店</h2>
-    <div id="shop-list">
-        <button class="shop-item" id="btn-ten-pull">
-            <div class="shop-item-title">十连抽</div>
-            <div class="shop-item-cost">消耗: <span id="ten-pull-cost">0</span> 积分</div>
-        </button>
-    </div>
-</aside>
-<aside id="history-panel" aria-label="历史抽取记录">
-    <h2>历史抽取记录</h2>
-    <div id="history-list"></div>
-</aside>
-<aside id="extreme-panel" aria-label="最高分和最低分记录">
-    <h2>最高 / 最低</h2>
-    <div id="extreme-list"></div>
-</aside>
+    <main class="page">
+        <section class="hero" aria-labelledby="hall-title">
+            <div class="eyebrow">🎮 Game Collection</div>
+            <h1 id="hall-title">游戏合集大厅</h1>
+            <p class="subtitle">这里是当前静态站点的游戏入口。每个游戏都放在独立目录中，可直接点击卡片进入游玩。</p>
+        </section>
 
-<script src="rating-module.js"></script>
-<script>
-    // ---------- 基础配置 ----------
-    const CHARS = 'abcdefghijklmnopqrstuvwxyz ';
+        <section class="games-grid" aria-label="游戏列表">
+            <a class="game-card" href="games/wordle/" aria-label="进入 Wordle 猜词游戏">
+                <div>
+                    <img class="game-icon" src="games/wordle/word.png" alt="WORD">
+                    <h2 class="game-title">Wordle / 猜词生成器</h2>
+                    <p class="game-desc">随机生成 6 位字符，按组合规则评分，包含积分、历史记录、最高最低记录与十连抽商店。</p>
+                </div>
+                <span class="game-action">进入游戏 →</span>
+            </a>
 
-    let generated = [];          // 存储当前生成的字符数组（长度6）
-    
-    // ---------- 全局控制台 API ----------
-    // 存储下一次固定单词（字符串，长度6，仅允许小写字母或空格）
-    let _nextFixedWordRaw = null;    // 原始字符串缓存，未验证
-    
-    /**
-     * 在控制台调用：设置下一次生成时使用的固定字符串（长度必须为6，只能包含小写字母 a-z 或 空格）
-     * 例：setNextWord("hello "), setNextWord("abcxyz"), setNextWord("abc  d") 等
-     * 注意：只影响接下来的一次点击「生成」，使用后自动清除。
-     */
-    window.setNextWord = function(wordStr) {
-        if (typeof wordStr !== 'string') {
-            console.warn('❌ setNextWord 需要传入字符串，例如 setNextWord("abcxyz")');
-            return false;
-        }
-        if (wordStr.length !== 6) {
-            console.warn(`❌ 字符串长度必须为 6 个字符，当前长度: ${wordStr.length}`);
-            return false;
-        }
-        // 校验字符合法性: 只能包含小写字母 a-z 或者空格
-        const validPattern = /^[a-z ]{6}$/;
-        if (!validPattern.test(wordStr)) {
-            console.warn(`❌ 仅允许小写字母 a-z 和空格，当前字符串: "${wordStr}"`);
-            return false;
-        }
-        _nextFixedWordRaw = wordStr;
-        console.log(`✅ 已设置下一次固定单词: "${wordStr}" (只生效一次，点击【生成】后自动清除)`);
-        return true;
-    };
-    
-    /**
-     * 清除下一次固定单词的预设，恢复完全随机生成。
-     */
-    window.clearNextWord = function() {
-        if (_nextFixedWordRaw !== null) {
-            console.log(`🧹 已清除预设单词 (原预设: "${_nextFixedWordRaw}")`);
-            _nextFixedWordRaw = null;
-        } else {
-            console.log('ℹ️ 当前没有任何预设单词，生成将保持完全随机');
-        }
-    };
-    
-    /**
-     * 查看当前预设的下一次单词（如果有）
-     */
-    window.getNextWordPreset = function() {
-        if (_nextFixedWordRaw) {
-            console.log(`📌 当前预设: "${_nextFixedWordRaw}" (未使用，点击【生成】后将生效一次)`);
-            return _nextFixedWordRaw;
-        } else {
-            console.log('📌 当前无预设，下一次生成为完全随机');
-            return null;
-        }
-    };
-    
-    // 显示帮助信息
-    console.log(
-        '%c✨ Word Generator 控制台扩展已就绪 ✨\n%c可用方法:\n setNextWord("字符串")   - 预设下一个6位单词(小写字母/空格)\n clearNextWord()        - 清除预设\n getNextWordPreset()    - 查看当前预设',
-        'color: #9f7aea; font-size: 12px; font-weight: bold;',
-        'color: #88cc88; font-size: 11px;'
-    );
-    
-    // ---------- DOM 元素绑定 ----------
-    const generateBtn = document.getElementById('generate-btn');
-    const restartBtn = document.getElementById('restart-btn');
-    
-    const historyList = document.getElementById('history-list');
-    const extremeList = document.getElementById('extreme-list');
-    const HISTORY_STORAGE_KEY = 'wordGeneratorHistory';
-    const HISTORY_LIMIT = 100;
-    
-    let isGenerating = false;
-    let activeTimers = [];
+            <div class="empty-card">更多游戏入口可继续添加到独立文件夹中。</div>
+        </section>
 
-    function clearActiveTimers() {
-        activeTimers.forEach(timer => {
-            if (timer.type === 'interval') clearInterval(timer.id);
-            if (timer.type === 'timeout') clearTimeout(timer.id);
-        });
-        activeTimers = [];
-    }
-
-    function finishGeneration() {
-        isGenerating = false;
-        clearActiveTimers();
-        generateBtn.disabled = false;
-        restartBtn.disabled = false;
-        updateCurrencyDisplay();
-    }
-
-    generateBtn.addEventListener('click', startGeneration);
-    restartBtn.addEventListener('click', restart);
-
-    // ---------- 商店与货币系统 ----------
-    const btnTenPull = document.getElementById('btn-ten-pull');
-    const tenPullCostSpan = document.getElementById('ten-pull-cost');
-    let tenPullCost = 0;
-
-    function initShop() {
-        tenPullCost = 10 * window.WordRating.RATING_THRESHOLDS.COMMON;
-        tenPullCostSpan.textContent = tenPullCost;
-        updateCurrencyDisplay();
-        window.addEventListener('scoreChanged', updateCurrencyDisplay);
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'wordGeneratorTotalScore') updateCurrencyDisplay();
-        });
-    }
-
-    function updateCurrencyDisplay() {
-        const total = window.WordRating.getStoredTotalScore();
-        document.getElementById('total-currency').textContent = total;
-        btnTenPull.disabled = isGenerating || total < tenPullCost;
-    }
-
-    btnTenPull.addEventListener('click', () => {
-        if (isGenerating) return;
-        const currentTotal = window.WordRating.getStoredTotalScore();
-        if (currentTotal < tenPullCost) {
-            alert(`积分不足！需要 ${tenPullCost} 积分，当前只有 ${currentTotal} 积分。`);
-            return;
-        }
-        
-        // 扣除积分
-        window.WordRating.saveStoredTotalScore(currentTotal - tenPullCost);
-        
-        performTenPull();
-    });
-
-    function performTenPull() {
-        if (isGenerating) return;
-        isGenerating = true;
-        generateBtn.disabled = true;
-        restartBtn.disabled = true;
-        btnTenPull.disabled = true;
-        clearActiveTimers();
-
-        // 切换界面
-        document.getElementById('main-screen').style.display = 'none';
-        document.getElementById('result-screen').style.display = 'block';
-        document.getElementById('rating').textContent = '';
-        document.getElementById('score').textContent = '';
-        document.getElementById('total-score').textContent = '';
-        document.getElementById('breakdown').innerHTML = '';
-        document.getElementById('restart-btn').style.display = 'none';
-        document.getElementById('word-text').textContent = '';
-        
-        const wordDisplay = document.getElementById('word-display');
-        wordDisplay.innerHTML = '';
-        for (let i = 0; i < 6; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'char-slot revealed';
-            slot.id = `slot-${i}`;
-            slot.innerHTML = '<span class="slot-char"></span>';
-            wordDisplay.appendChild(slot);
-        }
-        
-        let lastResult = null;
-        let lastChars = null;
-        
-        for (let i = 0; i < 10; i++) {
-            const chars = [];
-            for (let j = 0; j < 6; j++) {
-                chars.push(CHARS[Math.floor(Math.random() * CHARS.length)]);
-            }
-            
-            const result = window.WordRating.scoreCharacters(chars);
-            generated = chars;
-            addHistoryRecord(result);
-            
-            const newTotal = window.WordRating.getStoredTotalScore() + result.totalScore;
-            window.WordRating.saveStoredTotalScore(newTotal);
-            
-            if (i === 9) {
-                lastResult = result;
-                lastChars = chars;
-            }
-        }
-        
-        generated = lastChars;
-        
-        let wordStarted = false;
-        for (let i = 0; i < 6; i++) {
-            const slot = document.getElementById(`slot-${i}`);
-            const charSpan = slot.querySelector('.slot-char');
-            const char = lastChars[i];
-            
-            if (char === ' ') {
-                if (!wordStarted) {
-                    charSpan.textContent = ' ';
-                    slot.classList.add('space-char');
-                } else {
-                    charSpan.textContent = ' ';
-                    slot.classList.add('underscore-char');
-                }
-            } else {
-                charSpan.textContent = char;
-                wordStarted = true;
-            }
-        }
-        
-        // 静态显示最后一次结果，跳过动画
-        document.getElementById('word-text').textContent = `「${lastResult.word || '(空)'}」`;
-        
-        const ratingEl = document.getElementById('rating');
-        ratingEl.textContent = lastResult.rating;
-        ratingEl.className = lastResult.ratingClass;
-        
-        const scoreEl = document.getElementById('score');
-        scoreEl.textContent = `${lastResult.totalScore} points`;
-        scoreEl.className = '';
-        
-        const totalScoreEl = document.getElementById('total-score');
-        totalScoreEl.textContent = `总得分：${window.WordRating.getStoredTotalScore()} points`;
-        totalScoreEl.className = '';
-        
-        const restartBtn = document.getElementById('restart-btn');
-        restartBtn.style.display = 'inline-block';
-        restartBtn.className = 'btn';
-        
-        const breakdownEl = document.getElementById('breakdown');
-        breakdownEl.className = '';
-        breakdownEl.innerHTML = '<h3>📊 得分明细</h3>';
-        lastResult.breakdown.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'breakdown-item';
-            div.innerHTML = `<span>${item.desc}</span><span class="points">+ ${item.points}</span>`;
-            breakdownEl.appendChild(div);
-        });
-        const total = document.createElement('div');
-        total.className = 'breakdown-item';
-        total.style.cssText = 'border-top:2px solid #667eea;margin-top:8px;padding-top:8px;font-weight:bold;';
-        total.innerHTML = `<span>总计</span><span class="points">${lastResult.totalScore} points</span>`;
-        breakdownEl.appendChild(total);
-        finishGeneration();
-    }
-    
-    // ---------- 核心生成逻辑（支持预设固定单词，且只影响下一次） ----------
-    /**
-     * 开始生成序列（滚动动画+最终结果）
-     * 根据全局 _nextFixedWordRaw 决定是否使用固定字符，使用后立即清除预设。
-     */
-    function startGeneration() {
-        if (isGenerating) return;
-        isGenerating = true;
-        generateBtn.disabled = true;
-        restartBtn.disabled = true;
-        btnTenPull.disabled = true;
-        clearActiveTimers();
-
-        // 1. 切换界面
-        document.getElementById('main-screen').style.display = 'none';
-        document.getElementById('result-screen').style.display = 'block';
-        document.getElementById('rating').textContent = '';
-        document.getElementById('score').textContent = '';
-        document.getElementById('total-score').textContent = '';
-        document.getElementById('breakdown').innerHTML = '';
-        document.getElementById('restart-btn').style.display = 'none';
-        document.getElementById('word-text').textContent = '';
-        
-        // 2. 构建单词显示槽位
-        const wordDisplay = document.getElementById('word-display');
-        wordDisplay.innerHTML = '';
-        for (let i = 0; i < 6; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'char-slot';
-            slot.id = `slot-${i}`;
-            slot.innerHTML = '<span class="slot-char"></span>';
-            wordDisplay.appendChild(slot);
-        }
-        
-        // 3. 处理预设单词（只消耗一次）
-        let fixedWordArray = null;
-        if (_nextFixedWordRaw !== null) {
-            const presetStr = _nextFixedWordRaw;
-            // 再次校验格式（防御）
-            if (presetStr.length === 6 && /^[a-z ]{6}$/.test(presetStr)) {
-                fixedWordArray = presetStr.split('');   // 字符数组，例如 ['h','e','l','l','o',' ']
-                console.log(`🎯 使用预设单词: "${presetStr}"，本次生成将展示预设结果`);
-            } else {
-                console.warn(`⚠️ 预设单词格式无效: "${presetStr}"，将使用随机生成`);
-                fixedWordArray = null;
-            }
-            // 关键: 预设只生效一次，无论是否有效都清除原始预设，避免重复使用
-            _nextFixedWordRaw = null;
-        }
-        
-        // 清空全局 generated 数组
-        generated = [];
-        
-        // 开始递归生成动画（传入固定单词数组，没有则为 null）
-        generateSequence(0, fixedWordArray);
-    }
-    
-    /**
-     * 递归生成每一位字符（带滚动动画）
-     * @param {number} index         当前生成位置 0~5
-     * @param {Array<string>|null} fixedChars  若不为null，则最终字符必须从该数组对应索引取得
-     */
-    function generateSequence(index, fixedChars) {
-        if (index >= 6) {
-            // 所有字符生成完毕，进行评分及展示
-            processResult();
-            return;
-        }
-        
-        const slot = document.getElementById(`slot-${index}`);
-        slot.classList.add('active');
-        
-        let spinCount = 0;
-        // 随机滚动次数 (视觉丰富)
-        const spinMax = 12 + Math.floor(Math.random() * 8);
-        const charSpan = slot.querySelector('.slot-char');
-        
-        const spinInterval = setInterval(() => {
-            // 滚动时展示随机字符 (从 CHARS 中随机)
-            const randomChar = CHARS[Math.floor(Math.random() * CHARS.length)];
-            // 临时显示随机字符（空格会显示为特殊临时样式？为视觉舒适，简单显示为空格符）
-            if (randomChar === ' ') {
-                charSpan.textContent = ' ';
-            } else {
-                charSpan.textContent = randomChar;
-            }
-            spinCount++;
-            if (spinCount >= spinMax) {
-                clearInterval(spinInterval);
-                activeTimers = activeTimers.filter(timer => timer.id !== spinInterval);
-                
-                // ---------- 决定最终字符 ----------
-                let finalChar;
-                if (fixedChars && fixedChars[index] !== undefined) {
-                    // 使用预设字符
-                    finalChar = fixedChars[index];
-                } else {
-                    // 完全随机
-                    finalChar = CHARS[Math.floor(Math.random() * CHARS.length)];
-                }
-                
-                // 将最终字符推入全局数组（评分流程需要）
-                generated.push(finalChar);
-                
-                // 根据当前已生成序列判定 “单词是否已经开始”（用于空格显示风格）
-                // 注意: 只看前面已经生成的字符（不包括当前这一位的前后关系，传统风格是“单词开始后空格变为下划线”）
-                let wordStarted = generated.slice(0, index).some(c => c !== ' ');
-                
-                // 更新槽位的视觉样式和文字
-                if (finalChar === ' ') {
-                    if (!wordStarted) {
-                        // 单词尚未开始: 显示␣ (空格占位符)
-                        charSpan.textContent = ' ';
-                        slot.classList.add('space-char');
-                    } else {
-                        // 单词已经开始后出现空格: 显示 _ (代表单词内分隔)
-                        charSpan.textContent = ' ';
-                        slot.classList.add('underscore-char');
-                    }
-                } else {
-                    charSpan.textContent = finalChar;
-                }
-                
-                slot.classList.remove('active');
-                slot.classList.add('revealed');
-                
-                // 延迟进入下一位 (营造逐个揭示感)
-                const nextTimer = setTimeout(() => {
-                    activeTimers = activeTimers.filter(timer => timer.id !== nextTimer);
-                    generateSequence(index + 1, fixedChars);
-                }, 300);
-                activeTimers.push({ id: nextTimer, type: 'timeout' });
-            }
-        }, 30);
-        activeTimers.push({ id: spinInterval, type: 'interval' });
-    }
-    
-    // ---------- 评分系统接入 ----------
-    function processResult() {
-        const result = window.WordRating.scoreCharacters(generated);
-        const newTotal = window.WordRating.getStoredTotalScore() + result.totalScore;
-        window.WordRating.saveStoredTotalScore(newTotal);
-        addHistoryRecord(result);
-        window.WordRating.renderResult(result, {
-            wordText: document.getElementById('word-text'),
-            rating: document.getElementById('rating'),
-            score: document.getElementById('score'),
-            totalScore: document.getElementById('total-score'),
-            restartButton: document.getElementById('restart-btn'),
-            breakdown: document.getElementById('breakdown')
-        }, newTotal);
-        const finishTimer = setTimeout(() => {
-            activeTimers = activeTimers.filter(timer => timer.id !== finishTimer);
-            finishGeneration();
-        }, 1300);
-        activeTimers.push({ id: finishTimer, type: 'timeout' });
-    }
-
-    function getHistoryWord(characters) {
-        let wordStarted = false;
-        return characters.map(char => {
-            if (char === ' ') {
-                return wordStarted ? '_' : ' ';
-            }
-            wordStarted = true;
-            return char;
-        }).join('');
-    }
-
-    function loadHistoryRecords() {
-        try {
-            const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]');
-            return Array.isArray(parsed) ? parsed.slice(0, HISTORY_LIMIT) : [];
-        } catch (error) {
-            console.warn('历史抽取记录读取失败，已重置为空列表', error);
-            return [];
-        }
-    }
-
-    function saveHistoryRecords(records) {
-        try {
-            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(records.slice(0, HISTORY_LIMIT)));
-        } catch (error) {
-            console.warn('历史抽取记录保存失败', error);
-        }
-    }
-
-    function addHistoryRecord(result) {
-        const records = loadHistoryRecords();
-        const record = {
-            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            timestamp: new Date().toISOString(),
-            word: getHistoryWord(generated),
-            score: result.totalScore,
-            rating: result.rating,
-            ratingClass: result.ratingClass,
-            breakdown: result.breakdown.map(item => ({
-                desc: item.desc,
-                points: item.points
-            }))
-        };
-
-        records.unshift(record);
-        saveHistoryRecords(records);
-        renderHistoryRecords(records);
-        renderExtremeRecords(records);
-    }
-
-    function renderHistoryRecords(records = loadHistoryRecords()) {
-        historyList.innerHTML = '';
-
-        if (records.length === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'history-empty';
-            empty.textContent = '暂无记录';
-            historyList.appendChild(empty);
-            return;
-        }
-
-        records.forEach(record => {
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = 'history-item';
-            item.setAttribute('aria-expanded', 'false');
-
-            const summary = document.createElement('div');
-            summary.className = 'history-summary';
-
-            const word = document.createElement('span');
-            word.className = 'history-word';
-            word.textContent = record.word;
-
-            const score = document.createElement('span');
-            score.className = 'history-score';
-            score.textContent = `${record.score} pts`;
-
-            const rating = document.createElement('span');
-            rating.className = `history-rating ${record.ratingClass || ''}`;
-            rating.textContent = record.rating;
-
-            const time = document.createElement('span');
-            time.className = 'history-time';
-            time.textContent = new Date(record.timestamp).toLocaleString('zh-CN', {
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            summary.append(word, score, rating, time);
-
-            const breakdown = createRecordBreakdown(record);
-
-            item.append(summary, breakdown);
-            item.addEventListener('click', () => {
-                const expanded = item.classList.toggle('expanded');
-                item.setAttribute('aria-expanded', String(expanded));
-            });
-            historyList.appendChild(item);
-        });
-    }
-
-    function createRecordBreakdown(record) {
-        const breakdown = document.createElement('div');
-        breakdown.className = 'history-breakdown';
-        (record.breakdown || []).forEach(detail => {
-            const row = document.createElement('div');
-            row.className = 'history-breakdown-row';
-
-            const desc = document.createElement('span');
-            desc.textContent = detail.desc;
-
-            const points = document.createElement('span');
-            points.className = 'points';
-            points.textContent = `+ ${detail.points}`;
-
-            row.append(desc, points);
-            breakdown.appendChild(row);
-        });
-
-        const total = document.createElement('div');
-        total.className = 'history-breakdown-row';
-        total.style.fontWeight = 'bold';
-        total.innerHTML = `<span>总计</span><span class="points">${record.score} points</span>`;
-        breakdown.appendChild(total);
-        return breakdown;
-    }
-
-    function renderExtremeRecords(records = loadHistoryRecords()) {
-        extremeList.innerHTML = '';
-
-        if (records.length === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'history-empty';
-            empty.textContent = '暂无记录';
-            extremeList.appendChild(empty);
-            return;
-        }
-
-        const highest = records.reduce((best, record) => Number(record.score) > Number(best.score) ? record : best, records[0]);
-        const lowest = records.reduce((best, record) => Number(record.score) < Number(best.score) ? record : best, records[0]);
-        const extremes = highest.id === lowest.id
-            ? [{ label: '最高 / 最低', record: highest }]
-            : [{ label: '最高分', record: highest }, { label: '最低分', record: lowest }];
-
-        extremes.forEach(({ label, record }) => {
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = 'extreme-item';
-            item.setAttribute('aria-expanded', 'false');
-
-            const summary = document.createElement('div');
-            summary.className = 'history-summary';
-
-            const labelEl = document.createElement('span');
-            labelEl.className = 'extreme-label';
-            labelEl.textContent = label;
-
-            const score = document.createElement('span');
-            score.className = 'history-score';
-            score.textContent = `${record.score} pts`;
-
-            const word = document.createElement('span');
-            word.className = 'history-word';
-            word.textContent = record.word;
-
-            const rating = document.createElement('span');
-            rating.className = `history-rating ${record.ratingClass || ''}`;
-            rating.textContent = record.rating;
-
-            summary.append(labelEl, score, word, rating);
-            item.append(summary, createRecordBreakdown(record));
-            item.addEventListener('click', () => {
-                const expanded = item.classList.toggle('expanded');
-                item.setAttribute('aria-expanded', String(expanded));
-            });
-            extremeList.appendChild(item);
-        });
-    }
-
-    renderHistoryRecords();
-    renderExtremeRecords();
-    initShop();
-    
-    function restart() {
-        clearActiveTimers();
-        isGenerating = false;
-        generateBtn.disabled = false;
-        restartBtn.disabled = false;
-        updateCurrencyDisplay();
-        document.getElementById('result-screen').style.display = 'none';
-        document.getElementById('main-screen').style.display = 'block';
-        generated = [];
-        // 注意：重启时不清除预设单词的缓存，保证“下一次生成”的定义仍遵循setNextWord的设置
-        // 因为预设单词未实际使用，所以保留_ nextFixedWordRaw 原样
-    }
-</script>
+        <footer>静态站点大厅：无需构建步骤，直接打开本页面即可访问。</footer>
+    </main>
 </body>
-</html> 
+</html>
