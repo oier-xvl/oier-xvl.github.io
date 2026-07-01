@@ -1,283 +1,949 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Judge Clicker</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OJ 评测机 clicker</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1016;
+      --panel: #141925;
+      --panel-2: #111520;
+      --line: #2a3242;
+      --line-2: #3a4458;
+      --text: #e8edf8;
+      --muted: #9aa6ba;
+      --good: #6bd68f;
+      --warn: #efc75e;
+      --bad: #ff7b7b;
+      --chip: #1b2230;
+      --radius: 8px;
+      --sidebar: 290px;
+      --rightbar: 360px;
+      --topbar-h: 68px;
+    }
 
-        body {
-            min-height: 100vh;
-            font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
-            color: #fff7ed;
-            background:
-                radial-gradient(circle at 18% 10%, rgba(251, 191, 36, 0.22), transparent 28rem),
-                radial-gradient(circle at 82% 80%, rgba(124, 58, 237, 0.22), transparent 30rem),
-                #11111f;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-        }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font: 14px/1.45 "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #0b0e14 0%, #0d1016 100%);
+      color: var(--text);
+      overflow: hidden;
+    }
 
-        .game-shell {
-            width: min(720px, 100%);
-            padding: 32px;
-            border: 1px solid rgba(251, 191, 36, 0.24);
-            border-radius: 28px;
-            background: linear-gradient(145deg, rgba(31, 31, 48, 0.96), rgba(17, 17, 31, 0.92));
-            box-shadow: 0 24px 90px rgba(0, 0, 0, 0.38);
-            text-align: center;
-        }
+    button, input { font: inherit; }
+    button {
+      border: 1px solid var(--line);
+      background: #1a2130;
+      color: var(--text);
+      border-radius: 6px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: background .15s ease, transform .08s ease, opacity .15s ease;
+    }
+    button:hover:not(:disabled) { background: #20293b; }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
 
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 28px;
-        }
+    .app { height: 100vh; display: flex; flex-direction: column; }
 
-        .back-link {
-            color: #fde68a;
-            text-decoration: none;
-            font-weight: 700;
-        }
+    .topbar {
+      min-height: var(--topbar-h);
+      border-bottom: 1px solid var(--line);
+      background: rgba(9, 12, 18, .96);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 18px;
+    }
+    .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .brand strong { font-size: 16px; letter-spacing: 0; }
+    .brand span,
+    .meta,
+    .stat-label,
+    .hint,
+    .list-item small,
+    .upgrade-desc,
+    .sub,
+    .meta-line,
+    .empty,
+    .log-entry time,
+    .queue-foot {
+      color: var(--muted);
+    }
 
-        .tag {
-            padding: 8px 12px;
-            border-radius: 999px;
-            color: #fcd34d;
-            background: rgba(251, 191, 36, 0.1);
-            border: 1px solid rgba(251, 191, 36, 0.2);
-            font-size: 0.9rem;
-        }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      background: var(--chip);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .stat b { color: var(--text); }
 
-        h1 {
-            font-size: clamp(2.4rem, 9vw, 5rem);
-            line-height: 1;
-            letter-spacing: 0.06em;
-            color: #fbbf24;
-            text-shadow: 0 8px 34px rgba(251, 191, 36, 0.24);
-        }
+    .main {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(360px, 1fr) var(--rightbar);
+    }
+    .panel {
+      min-width: 0;
+      min-height: 0;
+      background: rgba(16, 20, 28, .94);
+      overflow: hidden;
+    }
+    .panel + .panel { border-left: 1px solid var(--line); }
+    .panel-inner { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+    .panel-head {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .panel-head h2 { margin: 0; font-size: 15px; }
+    .panel-head .sub { font-size: 12px; }
+    .panel-body {
+      min-height: 0;
+      overflow: auto;
+      padding: 14px 16px 16px;
+      flex: 1 1 auto;
+    }
 
-        .subtitle {
-            margin: 18px auto 30px;
-            max-width: 560px;
-            color: #d6d3d1;
-            line-height: 1.8;
-        }
+    .upgrade-list,
+    .queue-list { display: flex; flex-direction: column; gap: 12px; }
+    .upgrade {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-2);
+      padding: 12px;
+    }
+    .upgrade-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .upgrade h3 { margin: 0 0 4px; font-size: 14px; }
+    .upgrade-desc { font-size: 12px; margin-bottom: 10px; }
+    .upgrade-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 8px;
+      background: #192131;
+      border: 1px solid #2e3a4f;
+      border-radius: 999px;
+      color: #cdd7e7;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .upgrade-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .primary {
+      background: linear-gradient(180deg, #2d8be0 0%, #1f6fb8 100%);
+      border-color: #2b7fc8;
+    }
+    .primary:hover:not(:disabled) { background: linear-gradient(180deg, #3493e9 0%, #2177c6 100%); }
 
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-            margin: 26px 0;
-        }
+    .center-stage { display: flex; flex-direction: column; min-height: 0; }
+    .workbench {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      height: 100%;
+      min-height: 0;
+      align-content: start;
+    }
+    .submit-box {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, #121825 0%, #0f141d 100%);
+      padding: 18px;
+    }
+    .submit-box h2 { margin: 0 0 8px; font-size: 18px; }
+    .submit-box p { margin: 0 0 14px; color: var(--muted); }
+    .submit-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .submit-btn { min-width: 180px; min-height: 56px; font-size: 18px; font-weight: 700; }
+    .submit-btn[disabled] { background: #1d2330; }
 
-        .stat-card {
-            padding: 16px;
-            border-radius: 18px;
-            background: rgba(255, 255, 255, 0.055);
-            border: 1px solid rgba(255, 255, 255, 0.09);
-        }
+    .center-hint {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-2);
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
 
-        .stat-label {
-            color: #a8a29e;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-        }
+    .list-item {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-2);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .list-item-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+    .list-item-note {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #181f2d;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .status.good { color: var(--good); }
+    .status.warn { color: var(--warn); }
+    .status.bad { color: var(--bad); }
+    .progress {
+      height: 8px;
+      background: #0e131c;
+      border: 1px solid #273244;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3d8ddb 0%, #6dc3ff 100%);
+    }
+    .list-item-footer,
+    .queue-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+    .empty {
+      border: 1px dashed #334156;
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+      background: rgba(12, 16, 23, .55);
+    }
 
-        .stat-value {
-            font-size: 1.55rem;
-            font-weight: 800;
-            color: #fef3c7;
-        }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .74);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 50;
+    }
+    .overlay.show { display: flex; }
+    .modal {
+      width: min(420px, 100%);
+      border: 1px solid #5f2424;
+      background: #141016;
+      color: var(--text);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .modal-head {
+      padding: 14px 16px;
+      background: #2a1113;
+      border-bottom: 1px solid #55242a;
+      font-weight: 700;
+    }
+    .modal-body { padding: 16px; }
+    .modal-body p { margin: 0 0 14px; color: #f3d9d9; font-size: 15px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
-        .judge-button {
-            width: min(280px, 78vw);
-            aspect-ratio: 1;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            color: #1c1917;
-            background: radial-gradient(circle at 34% 28%, #fff7ed, #fbbf24 48%, #b45309 100%);
-            box-shadow: 0 18px 0 #78350f, 0 28px 50px rgba(0, 0, 0, 0.38);
-            font-size: 5rem;
-            transition: transform 0.08s ease, box-shadow 0.08s ease;
-            user-select: none;
-        }
+    @media (max-width: 1120px) {
+      .main {
+        grid-template-columns: 270px minmax(0, 1fr);
+        grid-template-rows: 1fr 1fr;
+      }
+      .panel.right {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+    }
 
-        .judge-button:active {
-            transform: translateY(14px) scale(0.98);
-            box-shadow: 0 4px 0 #78350f, 0 12px 28px rgba(0, 0, 0, 0.32);
-        }
-
-        .actions {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 12px;
-            margin-top: 28px;
-        }
-
-        .upgrade,
-        .reset {
-            padding: 13px 18px;
-            border: 1px solid rgba(251, 191, 36, 0.26);
-            border-radius: 14px;
-            color: #fff7ed;
-            background: rgba(251, 191, 36, 0.1);
-            font-weight: 800;
-            cursor: pointer;
-        }
-
-        .upgrade:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
-
-        .reset {
-            border-color: rgba(248, 113, 113, 0.28);
-            background: rgba(248, 113, 113, 0.1);
-        }
-
-        .message {
-            min-height: 1.6em;
-            margin-top: 20px;
-            color: #fde68a;
-            font-weight: 700;
-        }
-
-        @media (max-width: 560px) {
-            .game-shell {
-                padding: 22px;
-            }
-
-            .topbar,
-            .stats {
-                grid-template-columns: 1fr;
-                flex-direction: column;
-            }
-        }
-    </style>
+    @media (max-width: 840px) {
+      body { overflow: auto; }
+      .app { height: auto; min-height: 100vh; }
+      .topbar {
+        height: auto;
+        padding: 12px 14px;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        overflow: visible;
+      }
+      .panel + .panel {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+      .panel-body { max-height: none; overflow: visible; }
+      .center-cards { grid-template-columns: 1fr; }
+      .submit-btn { width: 100%; }
+      .submit-row { align-items: stretch; }
+    }
+  </style>
 </head>
 <body>
-    <main class="game-shell">
-        <div class="topbar">
-            <a class="back-link" href="../../">← 返回大厅</a>
-            <span class="tag">基础版本</span>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <strong>OJ 评测机 clicker</strong>
+        <span>提交、排队、炸机、升级，全部在前端完成</span>
+      </div>
+      <div class="stats" id="stats"></div>
+    </header>
+
+    <main class="main">
+      <section class="panel left">
+        <div class="panel-inner">
+          <div class="panel-head">
+            <div>
+              <h2>购买 / 升级</h2>
+              <div class="sub">价格会随等级增长</div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="upgrade-list" id="upgrades"></div>
+          </div>
         </div>
+      </section>
 
-        <h1>Judge Clicker</h1>
-        <p class="subtitle">点击法槌进行审判，积累判决点数。点数足够后可以升级，每次点击获得更多收益。</p>
-
-        <section class="stats" aria-label="游戏数据">
-            <div class="stat-card">
-                <div class="stat-label">判决点数</div>
-                <div class="stat-value" id="points">0</div>
+      <section class="panel center">
+        <div class="panel-inner center-stage">
+          <div class="panel-head">
+            <div>
+              <h2>主操作区</h2>
+              <div class="sub">点击提交，生成新的评测记录</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">每次点击</div>
-                <div class="stat-value" id="per-click">1</div>
+          </div>
+          <div class="workbench">
+            <div class="submit-box">
+              <h2>提交代码到评测机</h2>
+              <p>每次提交会消耗冷却时间，并在右侧生成一条递增的 runid 记录。</p>
+              <div class="submit-row">
+                <button class="primary submit-btn" id="submitBtn">提交</button>
+                <div class="meta" id="submitMeta"></div>
+              </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">等级</div>
-                <div class="stat-value" id="level">1</div>
+
+            <div class="center-cards">
+              <div class="info-card">
+                <h3>提交规则</h3>
+                <p>冷却结束后才能再次提交，升级会降低冷却、提高容量和收益。</p>
+              </div>
+              <div class="info-card">
+                <h3>评测队列</h3>
+                <p>右侧只显示未完成和刚结束不久的记录，方便你确认最终结果。</p>
+              </div>
             </div>
-        </section>
-
-        <button class="judge-button" id="judge-button" type="button" aria-label="点击进行审判">⚖️</button>
-
-        <div class="actions">
-            <button class="upgrade" id="upgrade-button" type="button">升级法槌：需要 25 点</button>
-            <button class="reset" id="reset-button" type="button">重置</button>
+          </div>
         </div>
+      </section>
 
-        <div class="message" id="message" aria-live="polite">开庭！点击法槌开始累计判决点数。</div>
+      <section class="panel right">
+        <div class="panel-inner">
+          <div class="panel-head">
+            <div>
+              <h2>未完成评测</h2>
+              <div class="sub">列表满载时会炸机</div>
+            </div>
+            <div class="sub" id="queueCount"></div>
+          </div>
+          <div class="panel-body">
+            <div class="queue-list" id="queueList"></div>
+          </div>
+        </div>
+      </section>
     </main>
+  </div>
 
-    <script>
-        const STORAGE_KEY = 'judgeClickerSave';
-        const pointsEl = document.getElementById('points');
-        const perClickEl = document.getElementById('per-click');
-        const levelEl = document.getElementById('level');
-        const judgeButton = document.getElementById('judge-button');
-        const upgradeButton = document.getElementById('upgrade-button');
-        const resetButton = document.getElementById('reset-button');
-        const messageEl = document.getElementById('message');
+  <div class="overlay" id="bombOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bombTitle">
+      <div class="modal-head" id="bombTitle">评测机异常</div>
+      <div class="modal-body">
+        <p>你把评测机炸了💀</p>
+        <div class="modal-actions">
+          <button class="primary" id="closeBomb">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        let state = loadState();
+  <script>
+    (() => {
+      const STORAGE_KEY = 'oj-judge-clicker-save-v2';
+      const STATUS_STEPS = ['Waiting', 'Compiling', 'Running', 'Passed testcase'];
+      const FINAL_RESULTS = [
+        { key: 'Accepted', weight: 34, reward: 12, color: 'good' },
+        { key: 'WA', weight: 22, reward: 1, color: 'warn' },
+        { key: 'TLE', weight: 17, reward: 0, color: 'bad' },
+        { key: 'MLE', weight: 10, reward: 0, color: 'bad' },
+        { key: 'RE', weight: 11, reward: 0, color: 'bad' },
+        { key: 'CE', weight: 6, reward: 0, color: 'bad' }
+      ];
 
-        function getUpgradeCost() {
-            return 25 * state.level * state.level;
+      const upgradeDefs = [
+        {
+          key: 'cooldown',
+          title: '减少提交冷却',
+          desc: '降低提交后的等待时间，最低不低于 1 秒。',
+          basePrice: 20,
+          priceMul: 1.55,
+          maxLevel: 12,
+          effect: level => `当前冷却：${formatCooldown(getCooldownMs(level))}`
+        },
+        {
+          key: 'capacity',
+          title: '增加评测容量',
+          desc: '扩大未完成队列上限，延后炸机。',
+          basePrice: 30,
+          priceMul: 1.62,
+          maxLevel: 16,
+          effect: level => `当前容量：${getCapacity(level)}`
+        },
+        {
+          key: 'accept',
+          title: '提高 Accepted 概率',
+          desc: '提升最终 Accepted 的命中率，其他结果同步压缩。',
+          basePrice: 45,
+          priceMul: 1.7,
+          maxLevel: 10,
+          effect: level => `Accepted 概率：${Math.round(getAcceptChance(level) * 100)}%`
+        },
+        {
+          key: 'testcase',
+          title: '提高 Passed testcase 收益',
+          desc: '提高进入 Passed testcase 时的阶段收益。',
+          basePrice: 35,
+          priceMul: 1.66,
+          maxLevel: 12,
+          effect: level => `阶段收益：+${getTestcaseYield(level)}`
         }
+      ];
 
-        function loadState() {
-            try {
-                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-                if (saved && Number.isFinite(saved.points) && Number.isFinite(saved.level)) {
-                    return {
-                        points: Math.max(0, Math.floor(saved.points)),
-                        level: Math.max(1, Math.floor(saved.level))
-                    };
-                }
-            } catch (error) {
-                console.warn('Judge Clicker 存档读取失败，已使用新存档。', error);
+      const el = {
+        stats: document.getElementById('stats'),
+        upgrades: document.getElementById('upgrades'),
+        submitBtn: document.getElementById('submitBtn'),
+        submitMeta: document.getElementById('submitMeta'),
+        queueList: document.getElementById('queueList'),
+        queueCount: document.getElementById('queueCount'),
+        log: document.getElementById('log'),
+        bombOverlay: document.getElementById('bombOverlay'),
+        closeBomb: document.getElementById('closeBomb')
+      };
+
+      const defaultState = () => ({
+        money: 50,
+        score: 0,
+        nextRunId: 1,
+        totalSubmits: 0,
+        nextSubmitAt: 0,
+        upgrades: { cooldown: 0, capacity: 0, accept: 0, testcase: 0 },
+        queue: [],
+        bombCount: 0,
+        bombVisible: false,
+        log: [],
+        lastTickAt: Date.now()
+      });
+
+      let state = loadState();
+      let timer = null;
+      let bootstrapped = false;
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return defaultState();
+          return mergeState(defaultState(), JSON.parse(raw));
+        } catch {
+          return defaultState();
+        }
+      }
+
+      function mergeState(base, saved) {
+        const merged = {
+          ...base,
+          ...(saved && typeof saved === 'object' ? saved : {})
+        };
+        merged.upgrades = { ...base.upgrades, ...(saved && saved.upgrades ? saved.upgrades : {}) };
+        merged.queue = Array.isArray(saved && saved.queue) ? saved.queue : [];
+        merged.finished = Array.isArray(saved && saved.finished) ? saved.finished : [];
+        merged.money = Math.max(0, Number(merged.money) || 0);
+        merged.score = Math.max(0, Number(merged.score) || 0);
+        merged.nextRunId = Math.max(1, Number(merged.nextRunId) || 1);
+        merged.totalSubmits = Math.max(0, Number(merged.totalSubmits) || 0);
+        merged.nextSubmitAt = Math.max(0, Number(merged.nextSubmitAt) || 0);
+        merged.bombCount = Math.max(0, Number(merged.bombCount) || 0);
+        merged.bombVisible = Boolean(merged.bombVisible);
+        merged.lastTickAt = Number(merged.lastTickAt) || Date.now();
+        return merged;
+      }
+
+      function saveState() {
+        state.lastTickAt = Date.now();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function clamp(v, min, max) {
+        return Math.min(max, Math.max(min, v));
+      }
+
+      function formatNumber(v) {
+        return Math.floor(v).toLocaleString('zh-CN');
+      }
+
+      function formatCooldown(ms) {
+        return `${(ms / 1000).toFixed(ms >= 10000 ? 0 : 1)}s`;
+      }
+
+      function formatDuration(ms) {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        return m <= 0 ? `${rem}s` : `${m}m ${rem}s`;
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function addMoney(amount) {
+        state.money += amount;
+      }
+
+      function randomChoiceWeighted(items) {
+        const total = items.reduce((sum, item) => sum + item.weight, 0);
+        let roll = Math.random() * total;
+        for (const item of items) {
+          roll -= item.weight;
+          if (roll <= 0) return item;
+        }
+        return items[items.length - 1];
+      }
+
+      function getCooldownMs(level) {
+        return Math.max(1000, Math.round(5000 * Math.pow(0.82, level)));
+      }
+
+      function getCapacity(level) {
+        return 100 + level * 35;
+      }
+
+      function getAcceptChance(level) {
+        return clamp(0.34 + level * 0.05, 0.34, 0.78);
+      }
+
+      function getTestcaseYield(level) {
+        return 2 + level * 2;
+      }
+
+      function getPrice(def) {
+        const level = state.upgrades[def.key] || 0;
+        return Math.ceil(def.basePrice * Math.pow(def.priceMul, level));
+      }
+
+      function canAfford(def) {
+        return state.money >= getPrice(def) && (state.upgrades[def.key] || 0) < def.maxLevel;
+      }
+
+      function resultColor(result) {
+        const found = FINAL_RESULTS.find(r => r.key === result);
+        return found ? found.color : 'warn';
+      }
+
+      function currentCooldown() {
+        return getCooldownMs(state.upgrades.cooldown || 0);
+      }
+
+      function queueCapacity() {
+        return getCapacity(state.upgrades.capacity || 0);
+      }
+
+      function currentPendingCount() {
+        return state.queue.length;
+      }
+
+      function pickFinalResult() {
+        const acceptChance = getAcceptChance(state.upgrades.accept || 0);
+        const testcaseBoost = state.upgrades.testcase || 0;
+        const passedFactor = 1 + testcaseBoost * 0.03;
+        const adjusted = FINAL_RESULTS.map(item => {
+          if (item.key === 'Accepted') {
+            return { ...item, weight: item.weight * (0.8 + acceptChance * 1.15) };
+          }
+          if (item.key === 'WA') {
+            return { ...item, weight: item.weight * (1.1 - Math.max(0, acceptChance - 0.34) * 0.15) };
+          }
+          if (item.key === 'TLE' || item.key === 'MLE' || item.key === 'RE') {
+            return { ...item, weight: item.weight / passedFactor };
+          }
+          return { ...item, weight: item.weight * 0.85 };
+        });
+        return randomChoiceWeighted(adjusted);
+      }
+
+      function spawnRun() {
+        const now = Date.now();
+        const runId = state.nextRunId++;
+        const job = {
+          runId,
+          createdAt: now,
+          stageIndex: 0,
+          stageStartAt: now,
+          finalResult: null,
+          finalAt: null,
+          progress: 0,
+          bonusApplied: false
+        };
+        state.queue.push(job);
+        state.totalSubmits += 1;
+        state.nextSubmitAt = now + currentCooldown();
+        logLine(`runid #${runId} 已提交到评测队列`);
+        if (state.queue.length > queueCapacity()) {
+          triggerBomb();
+        }
+      }
+
+      function triggerBomb() {
+        state.bombCount += 1;
+        state.queue = [];
+        state.bombVisible = true;
+        state.nextSubmitAt = Math.max(state.nextSubmitAt, Date.now() + 1000);
+        logLine('评测机炸了，队列已清空');
+        renderBomb();
+        saveState();
+      }
+
+      function finishJob(job, now) {
+        const result = pickFinalResult();
+        job.finalResult = result.key;
+        job.finalAt = now;
+        job.progress = 100;
+        job.resultAt = now;
+        job.purgeAt = now + 1500;
+        if (result.key === 'Accepted') {
+          addMoney(result.reward);
+          state.score += 1;
+        } else if (result.reward > 0) {
+          addMoney(result.reward);
+        }
+        state.finished.unshift(job);
+        state.finished = state.finished.slice(0, 12);
+      }
+
+      function tickJobs(now) {
+        const nextQueue = [];
+        for (const job of state.queue) {
+          if (job.finalResult) continue;
+          const durations = [1600, 1800, 2200, 2400];
+          const stageDuration = durations[job.stageIndex] || 2400;
+          const elapsed = now - job.stageStartAt;
+          if (elapsed >= stageDuration) {
+            if (job.stageIndex < STATUS_STEPS.length - 1) {
+              job.stageIndex += 1;
+              job.stageStartAt = now;
+              const stageName = STATUS_STEPS[job.stageIndex];
+              if (stageName === 'Passed testcase' && !job.bonusApplied) {
+                const gain = getTestcaseYield(state.upgrades.testcase || 0);
+                addMoney(gain);
+                job.bonusApplied = true;
+              }
+            } else {
+              finishJob(job, now);
+              continue;
             }
-
-            return { points: 0, level: 1 };
+          }
+          nextQueue.push(job);
         }
+        state.queue = nextQueue.filter(job => !job.finalResult);
+        state.finished = state.finished.filter(job => !job.resultShownAt || now < job.purgeAt);
+      }
 
-        function saveState() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      function updateCooldown(now) {
+        if (state.nextSubmitAt && now >= state.nextSubmitAt) {
+          state.nextSubmitAt = 0;
         }
+      }
 
-        function render() {
-            const perClick = state.level;
-            const cost = getUpgradeCost();
-
-            pointsEl.textContent = state.points;
-            perClickEl.textContent = perClick;
-            levelEl.textContent = state.level;
-            upgradeButton.textContent = `升级法槌：需要 ${cost} 点`;
-            upgradeButton.disabled = state.points < cost;
+      function computeJobView(job, now) {
+        if (job.finalResult) {
+          return {
+            status: job.finalResult,
+            detail: '已完成',
+            progress: 100,
+            color: resultColor(job.finalResult)
+          };
         }
+        const durations = [1600, 1800, 2200, 2400];
+        const stageDuration = durations[job.stageIndex] || 2400;
+        const elapsed = now - job.stageStartAt;
+        const progress = clamp(elapsed / stageDuration, 0, 1);
+        const stage = STATUS_STEPS[job.stageIndex] || 'Waiting';
+        const nextStage = STATUS_STEPS[job.stageIndex + 1];
+        const detail = nextStage ? `${stage} → ${nextStage}` : '等待最终判定';
+        return {
+          status: stage,
+          detail,
+          progress: Math.round(progress * 100),
+          color: 'warn'
+        };
+      }
 
-        judgeButton.addEventListener('click', () => {
-            state.points += state.level;
-            messageEl.textContent = `判决成功！+${state.level} 点`;
-            saveState();
-            render();
+      function renderUpgrades() {
+        el.upgrades.innerHTML = '';
+        for (const def of upgradeDefs) {
+          const level = state.upgrades[def.key] || 0;
+          const price = getPrice(def);
+          const maxed = level >= def.maxLevel;
+          const disabled = !canAfford(def);
+          const node = document.createElement('div');
+          node.className = 'upgrade';
+          node.innerHTML = `
+            <div class="upgrade-top">
+              <div>
+                <h3>${def.title}</h3>
+                <div class="upgrade-desc">${def.desc}</div>
+              </div>
+              <span class="badge">Lv.${level}${maxed ? ' / MAX' : ''}</span>
+            </div>
+            <div class="upgrade-meta">
+              <span class="badge">价格：${maxed ? '已满级' : formatNumber(price)}</span>
+              <span class="badge">${def.effect(level)}</span>
+            </div>
+            <div class="upgrade-actions">
+              <button class="primary" data-upgrade="${def.key}" ${disabled ? 'disabled' : ''}>${maxed ? '已满级' : '购买'}</button>
+              <span class="hint">${maxed ? '无需继续购买' : disabled ? '资源不足' : '立即生效'}</span>
+            </div>
+          `;
+          el.upgrades.appendChild(node);
+        }
+      }
+
+      function renderStats() {
+        const now = Date.now();
+        const remain = Math.max(0, state.nextSubmitAt - now);
+        const cooldownMs = currentCooldown();
+        el.stats.innerHTML = `
+          <div class="stat"><span class="stat-label">资源</span><b>${formatNumber(state.money)}</b></div>
+          <div class="stat"><span class="stat-label">评分</span><b>${formatNumber(state.score)}</b></div>
+          <div class="stat"><span class="stat-label">下个 runid</span><b>#${state.nextRunId}</b></div>
+          <div class="stat"><span class="stat-label">总提交</span><b>${formatNumber(state.totalSubmits)}</b></div>
+          <div class="stat"><span class="stat-label">容量</span><b>${currentPendingCount()}/${queueCapacity()}</b></div>
+          <div class="stat"><span class="stat-label">冷却</span><b>${remain > 0 ? formatCooldown(remain) : formatCooldown(cooldownMs)}</b></div>
+          <div class="stat"><span class="stat-label">炸机</span><b>${formatNumber(state.bombCount)}</b></div>
+        `;
+      }
+
+      function renderSubmit() {
+        const now = Date.now();
+        const remain = Math.max(0, state.nextSubmitAt - now);
+        const canSubmit = remain <= 0 && !state.bombVisible;
+        el.submitBtn.disabled = !canSubmit;
+        el.submitBtn.textContent = canSubmit ? '提交' : `冷却中 ${Math.ceil(remain / 1000)}s`;
+        el.submitMeta.textContent = `当前冷却 ${formatCooldown(currentCooldown())} · 队列容量 ${queueCapacity()} · 未完成 ${currentPendingCount()}`;
+      }
+
+      function renderQueue() {
+        el.queueCount.textContent = `${currentPendingCount()} / ${queueCapacity()}`;
+        const now = Date.now();
+        const visibleJobs = state.queue.concat(state.finished);
+        if (!visibleJobs.length) {
+          el.queueList.innerHTML = '<div class="empty">暂无未完成评测</div>';
+          return;
+        }
+        el.queueList.innerHTML = '';
+        for (const job of visibleJobs) {
+          if (job.finalResult && !job.resultShownAt) {
+            job.resultShownAt = now;
+            job.purgeAt = now + 1500;
+          }
+          const view = computeJobView(job, now);
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <div class="list-item-top">
+              <div>
+                <strong>runid #${job.runId}</strong><br>
+                <small>${view.detail}</small>
+              </div>
+              <span class="status ${view.color}">${view.status}</span>
+            </div>
+            <div class="progress"><i style="width:${view.progress}%"></i></div>
+            <div class="list-item-footer">
+              <span>阶段：${STATUS_STEPS[job.stageIndex] || 'Finalizing'}</span>
+              <span>已用时：${formatDuration(Math.max(0, now - job.createdAt))}</span>
+            </div>
+          `;
+          el.queueList.appendChild(item);
+        }
+      }
+
+      function renderLog() {
+        if (!el.log) return;
+        if (!state.log.length) {
+          el.log.innerHTML = '<div class="log-entry">系统已就绪</div>';
+          return;
+        }
+        el.log.innerHTML = state.log.map(item => `
+          <div class="log-entry">
+            <div>${escapeHtml(item.text)}</div>
+            <time>${new Date(item.at).toLocaleTimeString('zh-CN', { hour12: false })}</time>
+          </div>
+        `).join('');
+      }
+
+      function renderBomb() {
+        if (!el.bombOverlay) return;
+        el.bombOverlay.classList.toggle('show', state.bombVisible);
+        el.bombOverlay.setAttribute('aria-hidden', String(!state.bombVisible));
+      }
+
+      function renderAll() {
+        renderUpgrades();
+        renderStats();
+        renderSubmit();
+        renderQueue();
+        renderLog();
+        renderBomb();
+      }
+
+      function purchaseUpgrade(key) {
+        const def = upgradeDefs.find(x => x.key === key);
+        if (!def) return;
+        const level = state.upgrades[key] || 0;
+        if (level >= def.maxLevel) return;
+        const price = getPrice(def);
+        if (state.money < price) return;
+        state.money -= price;
+        state.upgrades[key] = level + 1;
+        logLine(`购买 ${def.title} Lv.${level + 1}`);
+        saveState();
+        renderAll();
+      }
+
+      function mainLoop() {
+        const now = Date.now();
+        const delta = now - (state.lastTickAt || now);
+        if (delta < 0 || delta > 60000) state.lastTickAt = now;
+        updateCooldown(now);
+        tickJobs(now);
+        renderAll();
+        saveState();
+      }
+
+      function startLoop() {
+        if (!timer) {
+          timer = setInterval(mainLoop, 250);
+        }
+        if (!bootstrapped) {
+          window.addEventListener('focus', mainLoop);
+          document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) mainLoop();
+          });
+          window.addEventListener('beforeunload', saveState);
+          bootstrapped = true;
+        }
+      }
+
+      el.upgrades.addEventListener('click', e => {
+        const btn = e.target.closest('[data-upgrade]');
+        if (!btn) return;
+        purchaseUpgrade(btn.dataset.upgrade);
+      });
+
+      if (el.submitBtn) {
+        el.submitBtn.addEventListener('click', () => {
+          const now = Date.now();
+          if (state.bombVisible) return;
+          if (now < state.nextSubmitAt) return;
+          spawnRun();
+          saveState();
+          renderAll();
         });
+      }
 
-        upgradeButton.addEventListener('click', () => {
-            const cost = getUpgradeCost();
-            if (state.points < cost) {
-                messageEl.textContent = `点数不足，还需要 ${cost - state.points} 点。`;
-                return;
-            }
-
-            state.points -= cost;
-            state.level += 1;
-            messageEl.textContent = `法槌升级到 ${state.level} 级！`;
-            saveState();
-            render();
+      if (el.closeBomb) {
+        el.closeBomb.addEventListener('click', () => {
+          state.bombVisible = false;
+          logLine('关闭炸机弹窗');
+          saveState();
+          renderAll();
         });
+      }
 
-        resetButton.addEventListener('click', () => {
-            state = { points: 0, level: 1 };
-            messageEl.textContent = '存档已重置，重新开庭。';
-            saveState();
-            render();
+      if (el.bombOverlay) {
+        el.bombOverlay.addEventListener('click', e => {
+          if (e.target === el.bombOverlay && el.closeBomb) el.closeBomb.click();
         });
+      }
 
-        render();
-    </script>
+      state.queue = state.queue.map(job => ({
+        ...job,
+        runId: Number(job.runId) || 0,
+        createdAt: Number(job.createdAt) || Date.now(),
+        stageIndex: clamp(Number(job.stageIndex) || 0, 0, STATUS_STEPS.length - 1),
+        stageStartAt: Number(job.stageStartAt) || Number(job.createdAt) || Date.now(),
+        finalResult: job.finalResult || null,
+        finalAt: Number(job.finalAt) || null,
+        progress: Number(job.progress) || 0,
+        bonusApplied: Boolean(job.bonusApplied)
+      }));
+
+      state.log = state.log.map(item => ({
+        text: String(item.text || ''),
+        at: Number(item.at) || Date.now()
+      }));
+
+      if (!state.log.length) {
+        logLine('系统已就绪');
+      }
+
+      renderAll();
+      mainLoop();
+      startLoop();
+    })();
+  </script>
 </body>
 </html>
