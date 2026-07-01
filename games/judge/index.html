@@ -549,6 +549,15 @@
           .replace(/'/g, '&#39;');
       }
 
+      function logLine(text) {
+        if (!Array.isArray(state.log)) state.log = [];
+        state.log.unshift({
+          text: String(text || ''),
+          at: Date.now()
+        });
+        state.log = state.log.slice(0, 50);
+      }
+
       function addMoney(amount) {
         state.money += amount;
       }
@@ -640,7 +649,7 @@
         state.queue.push(job);
         state.totalSubmits += 1;
         state.nextSubmitAt = now + currentCooldown();
-        logLine(`runid #${runId} 已提交到评测队列`);
+        // logLine(`runid #${runId} 已提交到评测队列`);
         if (state.queue.length > queueCapacity()) {
           triggerBomb();
         }
@@ -651,7 +660,7 @@
         state.queue = [];
         state.bombVisible = true;
         state.nextSubmitAt = Math.max(state.nextSubmitAt, Date.now() + 1000);
-        logLine('评测机炸了，队列已清空');
+        // logLine('评测机炸了，队列已清空');
         renderBomb();
         saveState();
       }
@@ -858,7 +867,7 @@
         if (state.money < price) return;
         state.money -= price;
         state.upgrades[key] = level + 1;
-        logLine(`购买 ${def.title} Lv.${level + 1}`);
+        // logLine(`购买 ${def.title} Lv.${level + 1}`);
         saveState();
         renderAll();
       }
@@ -907,7 +916,7 @@
       if (el.closeBomb) {
         el.closeBomb.addEventListener('click', () => {
           state.bombVisible = false;
-          logLine('关闭炸机弹窗');
+          // logLine('关闭炸机弹窗');
           saveState();
           renderAll();
         });
@@ -937,7 +946,7 @@
       }));
 
       if (!state.log.length) {
-        logLine('系统已就绪');
+        // logLine('系统已就绪');
       }
 
       renderAll();
