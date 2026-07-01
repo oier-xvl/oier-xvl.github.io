@@ -115,6 +115,19 @@
             margin-bottom: 22px;
         }
 
+        .game-badge {
+            width: 72px;
+            height: 72px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 18px;
+            border-radius: 20px;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(245, 158, 11, 0.12));
+            border: 1px solid rgba(251, 191, 36, 0.28);
+            box-shadow: inset 0 0 24px rgba(251, 191, 36, 0.08);
+        }
+
         .game-title {
             font-size: 1.6rem;
             margin-bottom: 10px;
@@ -176,6 +189,15 @@
                     <img class="game-icon" src="games/wordle/word.png" alt="WORD">
                     <h2 class="game-title">Wordle / 猜词生成器</h2>
                     <p class="game-desc">随机生成 6 位字符，按组合规则评分，包含积分、历史记录、最高最低记录与十连抽商店。</p>
+                </div>
+                <span class="game-action">进入游戏 →</span>
+            </a>
+
+            <a class="game-card" href="games/judge/" aria-label="进入 Judge Clicker 游戏">
+                <div>
+                    <div class="game-badge" aria-hidden="true">⚖️</div>
+                    <h2 class="game-title">Judge Clicker</h2>
+                    <p class="game-desc">点击法槌积累判决点数，提升等级并解锁更高效的审判加成。</p>
                 </div>
                 <span class="game-action">进入游戏 →</span>
             </a>

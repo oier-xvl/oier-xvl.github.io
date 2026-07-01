@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Judge Clicker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+            color: #fff7ed;
+            background:
+                radial-gradient(circle at 18% 10%, rgba(251, 191, 36, 0.22), transparent 28rem),
+                radial-gradient(circle at 82% 80%, rgba(124, 58, 237, 0.22), transparent 30rem),
+                #11111f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .game-shell {
+            width: min(720px, 100%);
+            padding: 32px;
+            border: 1px solid rgba(251, 191, 36, 0.24);
+            border-radius: 28px;
+            background: linear-gradient(145deg, rgba(31, 31, 48, 0.96), rgba(17, 17, 31, 0.92));
+            box-shadow: 0 24px 90px rgba(0, 0, 0, 0.38);
+            text-align: center;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .back-link {
+            color: #fde68a;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .tag {
+            padding: 8px 12px;
+            border-radius: 999px;
+            color: #fcd34d;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            font-size: 0.9rem;
+        }
+
+        h1 {
+            font-size: clamp(2.4rem, 9vw, 5rem);
+            line-height: 1;
+            letter-spacing: 0.06em;
+            color: #fbbf24;
+            text-shadow: 0 8px 34px rgba(251, 191, 36, 0.24);
+        }
+
+        .subtitle {
+            margin: 18px auto 30px;
+            max-width: 560px;
+            color: #d6d3d1;
+            line-height: 1.8;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin: 26px 0;
+        }
+
+        .stat-card {
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.055);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+        }
+
+        .stat-label {
+            color: #a8a29e;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #fef3c7;
+        }
+
+        .judge-button {
+            width: min(280px, 78vw);
+            aspect-ratio: 1;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #1c1917;
+            background: radial-gradient(circle at 34% 28%, #fff7ed, #fbbf24 48%, #b45309 100%);
+            box-shadow: 0 18px 0 #78350f, 0 28px 50px rgba(0, 0, 0, 0.38);
+            font-size: 5rem;
+            transition: transform 0.08s ease, box-shadow 0.08s ease;
+            user-select: none;
+        }
+
+        .judge-button:active {
+            transform: translateY(14px) scale(0.98);
+            box-shadow: 0 4px 0 #78350f, 0 12px 28px rgba(0, 0, 0, 0.32);
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .upgrade,
+        .reset {
+            padding: 13px 18px;
+            border: 1px solid rgba(251, 191, 36, 0.26);
+            border-radius: 14px;
+            color: #fff7ed;
+            background: rgba(251, 191, 36, 0.1);
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .upgrade:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .reset {
+            border-color: rgba(248, 113, 113, 0.28);
+            background: rgba(248, 113, 113, 0.1);
+        }
+
+        .message {
+            min-height: 1.6em;
+            margin-top: 20px;
+            color: #fde68a;
+            font-weight: 700;
+        }
+
+        @media (max-width: 560px) {
+            .game-shell {
+                padding: 22px;
+            }
+
+            .topbar,
+            .stats {
+                grid-template-columns: 1fr;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="game-shell">
+        <div class="topbar">
+            <a class="back-link" href="../../">← 返回大厅</a>
+            <span class="tag">基础版本</span>
+        </div>
+
+        <h1>Judge Clicker</h1>
+        <p class="subtitle">点击法槌进行审判，积累判决点数。点数足够后可以升级，每次点击获得更多收益。</p>
+
+        <section class="stats" aria-label="游戏数据">
+            <div class="stat-card">
+                <div class="stat-label">判决点数</div>
+                <div class="stat-value" id="points">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">每次点击</div>
+                <div class="stat-value" id="per-click">1</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">等级</div>
+                <div class="stat-value" id="level">1</div>
+            </div>
+        </section>
+
+        <button class="judge-button" id="judge-button" type="button" aria-label="点击进行审判">⚖️</button>
+
+        <div class="actions">
+            <button class="upgrade" id="upgrade-button" type="button">升级法槌：需要 25 点</button>
+            <button class="reset" id="reset-button" type="button">重置</button>
+        </div>
+
+        <div class="message" id="message" aria-live="polite">开庭！点击法槌开始累计判决点数。</div>
+    </main>
+
+    <script>
+        const STORAGE_KEY = 'judgeClickerSave';
+        const pointsEl = document.getElementById('points');
+        const perClickEl = document.getElementById('per-click');
+        const levelEl = document.getElementById('level');
+        const judgeButton = document.getElementById('judge-button');
+        const upgradeButton = document.getElementById('upgrade-button');
+        const resetButton = document.getElementById('reset-button');
+        const messageEl = document.getElementById('message');
+
+        let state = loadState();
+
+        function getUpgradeCost() {
+            return 25 * state.level * state.level;
+        }
+
+        function loadState() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+                if (saved && Number.isFinite(saved.points) && Number.isFinite(saved.level)) {
+                    return {
+                        points: Math.max(0, Math.floor(saved.points)),
+                        level: Math.max(1, Math.floor(saved.level))
+                    };
+                }
+            } catch (error) {
+                console.warn('Judge Clicker 存档读取失败，已使用新存档。', error);
+            }
+
+            return { points: 0, level: 1 };
+        }
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function render() {
+            const perClick = state.level;
+            const cost = getUpgradeCost();
+
+            pointsEl.textContent = state.points;
+            perClickEl.textContent = perClick;
+            levelEl.textContent = state.level;
+            upgradeButton.textContent = `升级法槌：需要 ${cost} 点`;
+            upgradeButton.disabled = state.points < cost;
+        }
+
+        judgeButton.addEventListener('click', () => {
+            state.points += state.level;
+            messageEl.textContent = `判决成功！+${state.level} 点`;
+            saveState();
+            render();
+        });
+
+        upgradeButton.addEventListener('click', () => {
+            const cost = getUpgradeCost();
+            if (state.points < cost) {
+                messageEl.textContent = `点数不足，还需要 ${cost - state.points} 点。`;
+                return;
+            }
+
+            state.points -= cost;
+            state.level += 1;
+            messageEl.textContent = `法槌升级到 ${state.level} 级！`;
+            saveState();
+            render();
+        });
+
+        resetButton.addEventListener('click', () => {
+            state = { points: 0, level: 1 };
+            messageEl.textContent = '存档已重置，重新开庭。';
+            saveState();
+            render();
+        });
+
+        render();
+    </script>
+</body>
+</html>
