@@ -192,6 +192,42 @@
       font-size: 13px;
     }
 
+    .rating-value {
+      font-weight: 700;
+    }
+    .rating-value.unrated {
+      color: #000000;
+      -webkit-text-stroke: .35px #e8edf8;
+      text-shadow: 0 0 2px rgba(255, 255, 255, .55);
+    }
+    .rating-value.headquarters { color: #000000; -webkit-text-stroke: .35px #e8edf8; }
+    .rating-value.newbie { color: #808080; }
+    .rating-value.pupil { color: #008000; }
+    .rating-value.specialist { color: #03a89e; }
+    .rating-value.expert { color: #0000ff; }
+    .rating-value.candidate-master { color: #aa00aa; }
+    .rating-value.master,
+    .rating-value.international-master { color: #ff8c00; }
+    .rating-value.grandmaster,
+    .rating-value.international-grandmaster { color: #ff0000; }
+    .rating-value.legendary-grandmaster,
+    .rating-value.tourist {
+      color: #ff0000;
+      text-shadow: -0.55em 0 0 #000000;
+    }
+    .rating-title {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 4px;
+      padding: 1px 6px;
+      border: 1px solid var(--line-2);
+      border-radius: 4px;
+      background: rgba(255, 255, 255, .06);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
     .list-item {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -461,6 +497,14 @@
           basePrice: 40,
           priceMul: 1.58,
           effect: level => `单点耗时：${formatTestcaseDuration(getTestcaseDurationMs(level))} → ${formatTestcaseDuration(getTestcaseDurationMs(level + 1))}`
+        },
+        {
+          key: 'bot',
+          title: 'bot 自动提交',
+          desc: '每隔特定时间自动提交一份代码，升级会缩短间隔，封底为 0ms。',
+          basePrice: 120,
+          priceMul: 1.75,
+          effect: level => `自动提交间隔：${formatTestcaseDuration(getBotIntervalMs(level))} → ${formatTestcaseDuration(getBotIntervalMs(level + 1))}`
         }
       ];
 
@@ -482,7 +526,8 @@
         nextRunId: 1,
         totalSubmits: 0,
         nextSubmitAt: 0,
-        upgrades: { cooldown: 0, capacity: 0, accept: 0, testcase: 0, speed: 0 },
+        nextBotSubmitAt: 0,
+        upgrades: { cooldown: 0, capacity: 0, accept: 0, testcase: 0, speed: 0, bot: 0 },
         queue: [],
         bombCount: 0,
         bombVisible: false,
@@ -517,6 +562,7 @@
         merged.nextRunId = Math.max(1, Number(merged.nextRunId) || 1);
         merged.totalSubmits = Math.max(0, Number(merged.totalSubmits) || 0);
         merged.nextSubmitAt = Math.max(0, Number(merged.nextSubmitAt) || 0);
+        merged.nextBotSubmitAt = Math.max(0, Number(merged.nextBotSubmitAt) || 0);
         merged.bombCount = Math.max(0, Number(merged.bombCount) || 0);
         merged.bombVisible = Boolean(merged.bombVisible);
         merged.lastTickAt = Number(merged.lastTickAt) || Date.now();
@@ -537,11 +583,13 @@
       }
 
       function formatCooldown(ms) {
+        if (!Number.isFinite(ms)) return '未购买';
         if (ms <= 0) return '0s';
         return `${(ms / 1000).toFixed(ms >= 10000 ? 0 : 1)}s`;
       }
 
       function formatTestcaseDuration(ms) {
+        if (!Number.isFinite(ms)) return '未购买';
         if (ms <= 0) return '0ms';
         return ms < 1000 ? `${ms}ms` : formatCooldown(ms);
       }
@@ -613,6 +661,11 @@
         return Math.ceil(approachLimit(TESTCASE_BASE_MS, 0, level, 0.88));
       }
 
+      function getBotIntervalMs(level) {
+        if (level <= 0) return Infinity;
+        return Math.ceil(approachLimit(10000, 0, level - 1, 0.82));
+      }
+
       function getPrice(def) {
         const level = state.upgrades[def.key] || 0;
         return Math.ceil(def.basePrice * Math.pow(def.priceMul, level));
@@ -662,7 +715,7 @@
         return randomChoiceWeighted(adjusted);
       }
 
-      function spawnRun() {
+      function spawnRun(applyManualCooldown = true) {
         const now = Date.now();
         const runId = state.nextRunId++;
         const job = {
@@ -678,7 +731,9 @@
         };
         state.queue.push(job);
         state.totalSubmits += 1;
-        state.nextSubmitAt = now + currentCooldown();
+        if (applyManualCooldown) {
+          state.nextSubmitAt = now + currentCooldown();
+        }
         // logLine(`runid #${runId} 已提交到评测队列`);
         if (state.queue.length > queueCapacity()) {
           triggerBomb();
@@ -752,6 +807,64 @@
         }
       }
 
+      function updateBot(now) {
+        const botLevel = state.upgrades.bot || 0;
+        if (botLevel <= 0 || state.bombVisible) {
+          state.nextBotSubmitAt = 0;
+          return;
+        }
+        const interval = getBotIntervalMs(botLevel);
+        if (!Number.isFinite(interval)) return;
+        if (!state.nextBotSubmitAt || state.nextBotSubmitAt > now + interval) {
+          state.nextBotSubmitAt = now + interval;
+          return;
+        }
+        const capacity = queueCapacity();
+        let guard = 0;
+        while (now >= state.nextBotSubmitAt && guard < 25) {
+          spawnRun(false);
+          if (state.bombVisible || state.queue.length > capacity) break;
+          state.nextBotSubmitAt += interval;
+          if (interval <= 0) break;
+          guard += 1;
+        }
+        if (interval <= 0 && !state.bombVisible) {
+          state.nextBotSubmitAt = now;
+        }
+      }
+
+      function ratingInfo(rating) {
+        const r = Math.floor(Number(rating) || 0);
+        const tiers = [
+          { min: 4000, cls: 'tourist', title: 'Tourist' },
+          { min: 3000, cls: 'legendary-grandmaster', title: 'Legendary Grandmaster' },
+          { min: 2600, cls: 'international-grandmaster', title: 'International Grandmaster' },
+          { min: 2400, cls: 'grandmaster', title: 'Grandmaster' },
+          { min: 2300, cls: 'international-master', title: 'International Master' },
+          { min: 2100, cls: 'master', title: 'Master' },
+          { min: 1900, cls: 'candidate-master', title: 'Candidate Master' },
+          { min: 1600, cls: 'expert', title: 'Expert' },
+          { min: 1400, cls: 'specialist', title: 'Specialist' },
+          { min: 1200, cls: 'pupil', title: 'Pupil' },
+          { min: 0, cls: 'newbie', title: 'Newbie' }
+        ];
+        const tier = tiers.find(item => r >= item.min) || tiers[tiers.length - 1];
+        const decoration = r > 5000 ? ratingDecoration(r - 5000) : '';
+        return { ...tier, title: tier.title + decoration };
+      }
+
+      function ratingDecoration(extra) {
+        const stars = Math.floor(extra / 1000);
+        const pluses = Math.floor((extra % 1000) / 250);
+        const starText = stars > 9 ? `${stars}*` : '*'.repeat(stars);
+        return `${starText}${'+'.repeat(pluses)}`;
+      }
+
+      function renderRatingStat() {
+        const info = ratingInfo(state.rating);
+        return `<span class="rating-value ${info.cls}">${formatNumber(state.rating)}</span><span class="rating-title">${escapeHtml(info.title)}</span>`;
+      }
+
       function computeJobView(job, now) {
         if (job.finalResult) {
           return {
@@ -810,7 +923,7 @@
         const remain = Math.max(0, state.nextSubmitAt - now);
         const cooldownMs = currentCooldown();
         el.stats.innerHTML = `
-          <div class="stat"><span class="stat-label">rating</span><b>${formatNumber(state.rating)}</b></div>
+          <div class="stat"><span class="stat-label">rating</span><b>${renderRatingStat()}</b></div>
           <div class="stat"><span class="stat-label">accepted</span><b>${formatNumber(state.score)}</b></div>
           <div class="stat"><span class="stat-label">下个 runid</span><b>#${state.nextRunId}</b></div>
           <div class="stat"><span class="stat-label">总提交</span><b>${formatNumber(state.totalSubmits)}</b></div>
@@ -826,7 +939,9 @@
         const canSubmit = remain <= 0 && !state.bombVisible;
         el.submitBtn.disabled = !canSubmit;
         el.submitBtn.textContent = canSubmit ? '提交' : `冷却中 ${Math.ceil(remain / 1000)}s`;
-        el.submitMeta.textContent = `当前冷却 ${formatCooldown(currentCooldown())} · 单点耗时 ${formatTestcaseDuration(getTestcaseDurationMs(state.upgrades.speed || 0))} · 队列容量 ${queueCapacity()} · 未完成 ${currentPendingCount()}`;
+        const botLevel = state.upgrades.bot || 0;
+        const botText = botLevel > 0 ? ` · bot 间隔 ${formatTestcaseDuration(getBotIntervalMs(botLevel))}` : '';
+        el.submitMeta.textContent = `当前冷却 ${formatCooldown(currentCooldown())} · 单点耗时 ${formatTestcaseDuration(getTestcaseDurationMs(state.upgrades.speed || 0))}${botText} · 队列容量 ${queueCapacity()} · 未完成 ${currentPendingCount()}`;
       }
 
       function renderQueue() {
@@ -913,6 +1028,7 @@
         const delta = now - (state.lastTickAt || now);
         if (delta < 0 || delta > 60000) state.lastTickAt = now;
         updateCooldown(now);
+        updateBot(now);
         tickJobs(now);
         renderAll();
         saveState();
@@ -943,7 +1059,7 @@
           const now = Date.now();
           if (state.bombVisible) return;
           if (now < state.nextSubmitAt) return;
-          spawnRun();
+          spawnRun(true);
           saveState();
           renderAll();
         });
