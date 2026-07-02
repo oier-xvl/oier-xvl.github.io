@@ -128,6 +128,20 @@
 
     .upgrade-list,
     .queue-list { display: flex; flex-direction: column; gap: 12px; }
+    .upgrade-divider {
+      position: sticky;
+      top: -14px;
+      z-index: 1;
+      margin: -2px 0 0;
+      padding: 8px 10px;
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      background: #20283a;
+      color: var(--text);
+      font-weight: 700;
+      text-align: center;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
+    }
     .upgrade {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -522,7 +536,9 @@
 
       const defaultState = () => ({
         rating: 50,
+        accepted: 0,
         score: 0,
+        ioiEnabled: false,
         nextRunId: 1,
         totalSubmits: 0,
         nextSubmitAt: 0,
@@ -558,7 +574,14 @@
         merged.queue = Array.isArray(saved && saved.queue) ? saved.queue : [];
         merged.finished = Array.isArray(saved && saved.finished) ? saved.finished : [];
         merged.rating = Math.max(0, Number(merged.rating) || 0);
-        merged.score = Math.max(0, Number(merged.score) || 0);
+        merged.ioiEnabled = Boolean(merged.ioiEnabled);
+        if (saved && typeof saved === 'object' && !('accepted' in saved) && !merged.ioiEnabled) {
+          merged.accepted = Math.max(0, Number(saved.score) || 0);
+          merged.score = 0;
+        } else {
+          merged.accepted = Math.max(0, Number(merged.accepted) || 0);
+          merged.score = Math.max(0, Number(merged.score) || 0);
+        }
         merged.nextRunId = Math.max(1, Number(merged.nextRunId) || 1);
         merged.totalSubmits = Math.max(0, Number(merged.totalSubmits) || 0);
         merged.nextSubmitAt = Math.max(0, Number(merged.nextSubmitAt) || 0);
@@ -671,11 +694,24 @@
         return Math.ceil(def.basePrice * Math.pow(def.priceMul, level));
       }
 
+      function getScorePrice() {
+        return Math.ceil(75 * Math.pow(1.18, state.score || 0));
+      }
+
       function canAfford(def) {
         return state.rating >= getPrice(def);
       }
 
+      function canBuyIoiRules() {
+        return !state.ioiEnabled && state.accepted >= 50;
+      }
+
+      function canBuyScore() {
+        return state.ioiEnabled && state.rating >= getScorePrice();
+      }
+
       function resultColor(result) {
+        if (result === 'unaccepted') return 'bad';
         const found = FINAL_RESULTS.find(r => r.key === result);
         return found ? found.color : 'warn';
       }
@@ -725,6 +761,8 @@
           stageStartAt: now,
           testcaseIndex: 0,
           acceptedCount: 0,
+          unacceptedCount: 0,
+          ratingEarned: 0,
           finalResult: null,
           finalAt: null,
           progress: 0
@@ -757,8 +795,11 @@
         job.resultAt = now;
         job.purgeAt = now + 1500;
         if (resultKey === 'accepted') {
-          addRating(getAllAcceptedBonus(state.upgrades.testcase || 0));
-          state.score += 1;
+          const bonus = getAllAcceptedBonus(state.upgrades.testcase || 0);
+          addRating(bonus);
+          job.ratingEarned = Math.max(0, Number(job.ratingEarned) || 0) + bonus;
+          addRating(job.ratingEarned);
+          state.accepted += 1;
         }
         state.finished.unshift(job);
         state.finished = state.finished.slice(0, 12);
@@ -781,10 +822,23 @@
             } else {
               const result = pickTestcaseResult();
               if (result.key === 'accepted') {
+                const yieldValue = getTestcaseYield(state.upgrades.testcase || 0);
                 job.acceptedCount += 1;
-                addRating(getTestcaseYield(state.upgrades.testcase || 0));
-                if (job.acceptedCount >= TESTCASE_COUNT) {
-                  finishJob(job, now, 'accepted');
+                addRating(yieldValue);
+                job.ratingEarned = Math.max(0, Number(job.ratingEarned) || 0) + yieldValue;
+                if (job.acceptedCount + job.unacceptedCount >= TESTCASE_COUNT) {
+                  finishJob(job, now, job.acceptedCount >= TESTCASE_COUNT ? 'accepted' : 'unaccepted');
+                  continue;
+                }
+                job.testcaseIndex += 1;
+                job.stageStartAt = now;
+              } else if (state.ioiEnabled) {
+                if (state.score > 0) {
+                  state.score = Math.max(0, state.score - 1);
+                }
+                job.unacceptedCount += 1;
+                if (state.score <= 0 || job.acceptedCount + job.unacceptedCount >= TESTCASE_COUNT) {
+                  finishJob(job, now, 'unaccepted');
                   continue;
                 }
                 job.testcaseIndex += 1;
@@ -869,7 +923,7 @@
         if (job.finalResult) {
           return {
             status: job.finalResult,
-            detail: '已完成',
+            detail: job.finalResult === 'accepted' ? `已完成 · rating 额外 +${formatNumber(job.ratingEarned || 0)}` : '已完成',
             progress: 100,
             color: resultColor(job.finalResult)
           };
@@ -880,7 +934,7 @@
         const progress = clamp(elapsed / stageDuration, 0, 1);
         const stage = STATUS_STEPS[job.stageIndex] || 'Waiting';
         const nextStage = STATUS_STEPS[job.stageIndex + 1];
-        const detail = nextStage ? `${stage} → ${nextStage}` : `测试点 ${job.testcaseIndex + 1}/${TESTCASE_COUNT}`;
+        const detail = nextStage ? `${stage} → ${nextStage}` : `测试点 ${job.testcaseIndex + 1}/${TESTCASE_COUNT}${job.unacceptedCount ? ` · unaccepted ${job.unacceptedCount}` : ''}`;
         return {
           status: stage,
           detail,
@@ -891,6 +945,7 @@
 
       function renderUpgrades() {
         el.upgrades.innerHTML = '';
+        renderPhaseShop();
         for (const def of upgradeDefs) {
           const level = state.upgrades[def.key] || 0;
           const price = getPrice(def);
@@ -918,13 +973,67 @@
         }
       }
 
+      function renderPhaseShop() {
+        const divider = document.createElement('div');
+        divider.className = 'upgrade-divider';
+        divider.textContent = '阶段性商品';
+        el.upgrades.appendChild(divider);
+
+        if (!state.ioiEnabled) {
+          const node = document.createElement('div');
+          node.className = 'upgrade';
+          node.innerHTML = `
+            <div class="upgrade-top">
+              <div>
+                <h3>IOI 赛制</h3>
+                <div class="upgrade-desc">消耗 50 accepted 解锁得分商店；之后 unaccepted 会优先削减得分，不影响已获得的 rating 奖励。</div>
+              </div>
+              <span class="badge">阶段</span>
+            </div>
+            <div class="upgrade-meta">
+              <span class="badge">价格：50 accepted</span>
+              <span class="badge">当前 accepted：${formatNumber(state.accepted)}</span>
+            </div>
+            <div class="upgrade-actions">
+              <button class="primary" data-special="ioi" ${canBuyIoiRules() ? '' : 'disabled'}>购买</button>
+              <span class="hint">${canBuyIoiRules() ? '购买后该商品消失' : 'accepted 不足'}</span>
+            </div>
+          `;
+          el.upgrades.appendChild(node);
+          return;
+        }
+
+        const price = getScorePrice();
+        const node = document.createElement('div');
+        node.className = 'upgrade';
+        node.innerHTML = `
+          <div class="upgrade-top">
+            <div>
+              <h3>得分</h3>
+              <div class="upgrade-desc">花费 rating 购买 +1 得分；评测出现 unaccepted 时会先消耗得分。</div>
+            </div>
+            <span class="badge">当前 ${formatNumber(state.score)}</span>
+          </div>
+          <div class="upgrade-meta">
+            <span class="badge">价格：${formatNumber(price)} rating</span>
+            <span class="badge">效果：得分 +1</span>
+          </div>
+          <div class="upgrade-actions">
+            <button class="primary" data-special="score" ${canBuyScore() ? '' : 'disabled'}>购买</button>
+            <span class="hint">${canBuyScore() ? '立即生效' : 'rating 不足'}</span>
+          </div>
+        `;
+        el.upgrades.appendChild(node);
+      }
+
       function renderStats() {
         const now = Date.now();
         const remain = Math.max(0, state.nextSubmitAt - now);
         const cooldownMs = currentCooldown();
         el.stats.innerHTML = `
           <div class="stat"><span class="stat-label">rating</span><b>${renderRatingStat()}</b></div>
-          <div class="stat"><span class="stat-label">accepted</span><b>${formatNumber(state.score)}</b></div>
+          <div class="stat"><span class="stat-label">accepted</span><b>${formatNumber(state.accepted)}</b></div>
+          <div class="stat"><span class="stat-label">得分</span><b>${state.ioiEnabled ? formatNumber(state.score) : '未解锁'}</b></div>
           <div class="stat"><span class="stat-label">下个 runid</span><b>#${state.nextRunId}</b></div>
           <div class="stat"><span class="stat-label">总提交</span><b>${formatNumber(state.totalSubmits)}</b></div>
           <div class="stat"><span class="stat-label">容量</span><b>${currentPendingCount()}/${queueCapacity()}</b></div>
@@ -1010,6 +1119,20 @@
         renderBomb();
       }
 
+      function purchaseSpecial(key) {
+        if (key === 'ioi') {
+          if (!canBuyIoiRules()) return;
+          state.accepted -= 50;
+          state.ioiEnabled = true;
+        } else if (key === 'score') {
+          if (!canBuyScore()) return;
+          state.rating -= getScorePrice();
+          state.score += 1;
+        }
+        saveState();
+        renderAll();
+      }
+
       function purchaseUpgrade(key) {
         const def = upgradeDefs.find(x => x.key === key);
         if (!def) return;
@@ -1049,6 +1172,11 @@
       }
 
       el.upgrades.addEventListener('click', e => {
+        const specialBtn = e.target.closest('[data-special]');
+        if (specialBtn) {
+          purchaseSpecial(specialBtn.dataset.special);
+          return;
+        }
         const btn = e.target.closest('[data-upgrade]');
         if (!btn) return;
         purchaseUpgrade(btn.dataset.upgrade);
@@ -1088,6 +1216,8 @@
         stageStartAt: sanitizeStageStartAt(job),
         testcaseIndex: clamp(Number(job.testcaseIndex) || 0, 0, TESTCASE_COUNT - 1),
         acceptedCount: clamp(Number(job.acceptedCount) || 0, 0, TESTCASE_COUNT),
+        unacceptedCount: clamp(Number(job.unacceptedCount) || 0, 0, TESTCASE_COUNT),
+        ratingEarned: Math.max(0, Number(job.ratingEarned) || 0),
         finalResult: job.finalResult || null,
         finalAt: Number(job.finalAt) || null,
         progress: Number(job.progress) || 0
