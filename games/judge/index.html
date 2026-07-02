@@ -425,47 +425,42 @@
         {
           key: 'cooldown',
           title: '减少提交冷却',
-          desc: '降低提交后的等待时间，最低不低于 1 秒。',
+          desc: '降低提交后的等待时间，指数趋近 0 秒。',
           basePrice: 20,
           priceMul: 1.55,
-          maxLevel: 12,
-          effect: level => `当前冷却：${formatCooldown(getCooldownMs(level))}`
+          effect: level => `提交冷却：${formatCooldown(getCooldownMs(level))} → ${formatCooldown(getCooldownMs(level + 1))}`
         },
         {
           key: 'capacity',
           title: '增加评测容量',
-          desc: '扩大未完成队列上限，延后炸机。',
+          desc: '扩大未完成队列上限，指数趋近原容量上限。',
           basePrice: 30,
           priceMul: 1.62,
-          maxLevel: 16,
-          effect: level => `当前容量：${getCapacity(level)}`
+          effect: level => `队列容量：${getCapacity(level)} → ${getCapacity(level + 1)}`
         },
         {
           key: 'accept',
           title: '提高 accepted 概率',
-          desc: '提升每个测试点 accepted 的命中率，其他结果同步压缩。',
+          desc: '提升每个测试点 accepted 的命中率，其他结果同步压缩，指数趋近 100%。',
           basePrice: 45,
           priceMul: 1.7,
-          maxLevel: 10,
-          effect: level => `accepted 概率：${Math.round(getAcceptChance(level) * 100)}%`
+          effect: level => `accepted 概率：${Math.round(getAcceptChance(level) * 100)}% → ${Math.round(getAcceptChance(level + 1) * 100)}%`
         },
         {
           key: 'testcase',
           title: '提高测试点 rating 收益',
-          desc: '提高每个 accepted 测试点和全通过额外奖励获得的 rating。',
+          desc: '提高每个 accepted 测试点和全通过额外奖励获得的 rating，指数趋近原收益上限。',
           basePrice: 35,
           priceMul: 1.66,
-          maxLevel: 12,
-          effect: level => `测试点收益：+${getTestcaseYield(level)} rating`
+          effect: level => `测试点收益：+${getTestcaseYield(level)} → +${getTestcaseYield(level + 1)} rating`
         },
         {
           key: 'speed',
           title: '优化测试点耗时',
-          desc: '降低每个测试点的评测耗时，基准为 2000ms。',
+          desc: '降低每个测试点的评测耗时，指数趋近 0ms。',
           basePrice: 40,
           priceMul: 1.58,
-          maxLevel: 12,
-          effect: level => `单点耗时：${formatCooldown(getTestcaseDurationMs(level))}`
+          effect: level => `单点耗时：${formatTestcaseDuration(getTestcaseDurationMs(level))} → ${formatTestcaseDuration(getTestcaseDurationMs(level + 1))}`
         }
       ];
 
@@ -542,7 +537,13 @@
       }
 
       function formatCooldown(ms) {
+        if (ms <= 0) return '0s';
         return `${(ms / 1000).toFixed(ms >= 10000 ? 0 : 1)}s`;
+      }
+
+      function formatTestcaseDuration(ms) {
+        if (ms <= 0) return '0ms';
+        return ms < 1000 ? `${ms}ms` : formatCooldown(ms);
       }
 
       function formatDuration(ms) {
@@ -584,28 +585,32 @@
         return items[items.length - 1];
       }
 
+      function approachLimit(base, limit, level, decay) {
+        return limit - (limit - base) * Math.pow(decay, Math.max(0, level));
+      }
+
       function getCooldownMs(level) {
-        return Math.max(1000, Math.round(5000 * Math.pow(0.82, level)));
+        return Math.ceil(approachLimit(5000, 0, level, 0.82));
       }
 
       function getCapacity(level) {
-        return 100 + level * 35;
+        return Math.floor(approachLimit(100, 660, level, 0.9375));
       }
 
       function getAcceptChance(level) {
-        return clamp(0.34 + level * 0.05, 0.34, 0.78);
+        return approachLimit(0.34, 1, level, 0.9);
       }
 
       function getTestcaseYield(level) {
-        return 2 + level * 2;
+        return Math.floor(approachLimit(2, 26, level, 11 / 12));
       }
 
       function getAllAcceptedBonus(level) {
-        return ALL_ACCEPTED_BONUS + level * 5;
+        return Math.floor(approachLimit(ALL_ACCEPTED_BONUS, 80, level, 11 / 12));
       }
 
       function getTestcaseDurationMs(level) {
-        return Math.max(700, Math.round(TESTCASE_BASE_MS * Math.pow(0.88, level)));
+        return Math.ceil(approachLimit(TESTCASE_BASE_MS, 0, level, 0.88));
       }
 
       function getPrice(def) {
@@ -614,7 +619,7 @@
       }
 
       function canAfford(def) {
-        return state.rating >= getPrice(def) && (state.upgrades[def.key] || 0) < def.maxLevel;
+        return state.rating >= getPrice(def);
       }
 
       function resultColor(result) {
@@ -641,20 +646,19 @@
 
       function pickTestcaseResult() {
         const acceptChance = getAcceptChance(state.upgrades.accept || 0);
+        if (Math.random() < acceptChance) {
+          return FINAL_RESULTS.find(item => item.key === 'accepted');
+        }
         const speedBoost = state.upgrades.speed || 0;
         const optimizedFactor = 1 + speedBoost * 0.02;
-        const adjusted = FINAL_RESULTS.map(item => {
-          if (item.key === 'accepted') {
-            return { ...item, weight: item.weight * (0.8 + acceptChance * 1.15) };
-          }
-          if (item.key === 'WA') {
-            return { ...item, weight: item.weight * (1.1 - Math.max(0, acceptChance - 0.34) * 0.15) };
-          }
-          if (item.key === 'TLE' || item.key === 'MLE' || item.key === 'RE') {
-            return { ...item, weight: item.weight / optimizedFactor };
-          }
-          return { ...item, weight: item.weight * 0.85 };
-        });
+        const adjusted = FINAL_RESULTS
+          .filter(item => item.key !== 'accepted')
+          .map(item => {
+            if (item.key === 'TLE' || item.key === 'MLE' || item.key === 'RE') {
+              return { ...item, weight: item.weight / optimizedFactor };
+            }
+            return item;
+          });
         return randomChoiceWeighted(adjusted);
       }
 
@@ -777,7 +781,6 @@
         for (const def of upgradeDefs) {
           const level = state.upgrades[def.key] || 0;
           const price = getPrice(def);
-          const maxed = level >= def.maxLevel;
           const disabled = !canAfford(def);
           const node = document.createElement('div');
           node.className = 'upgrade';
@@ -787,15 +790,15 @@
                 <h3>${def.title}</h3>
                 <div class="upgrade-desc">${def.desc}</div>
               </div>
-              <span class="badge">Lv.${level}${maxed ? ' / MAX' : ''}</span>
+              <span class="badge">Lv.${level}</span>
             </div>
             <div class="upgrade-meta">
-              <span class="badge">价格：${maxed ? '已满级' : formatNumber(price)}</span>
+              <span class="badge">价格：${formatNumber(price)}</span>
               <span class="badge">${def.effect(level)}</span>
             </div>
             <div class="upgrade-actions">
-              <button class="primary" data-upgrade="${def.key}" ${disabled ? 'disabled' : ''}>${maxed ? '已满级' : '购买'}</button>
-              <span class="hint">${maxed ? '无需继续购买' : disabled ? 'rating 不足' : '立即生效'}</span>
+              <button class="primary" data-upgrade="${def.key}" ${disabled ? 'disabled' : ''}>购买</button>
+              <span class="hint">${disabled ? 'rating 不足' : '立即生效'}</span>
             </div>
           `;
           el.upgrades.appendChild(node);
@@ -823,7 +826,7 @@
         const canSubmit = remain <= 0 && !state.bombVisible;
         el.submitBtn.disabled = !canSubmit;
         el.submitBtn.textContent = canSubmit ? '提交' : `冷却中 ${Math.ceil(remain / 1000)}s`;
-        el.submitMeta.textContent = `当前冷却 ${formatCooldown(currentCooldown())} · 单点耗时 ${formatCooldown(getTestcaseDurationMs(state.upgrades.speed || 0))} · 队列容量 ${queueCapacity()} · 未完成 ${currentPendingCount()}`;
+        el.submitMeta.textContent = `当前冷却 ${formatCooldown(currentCooldown())} · 单点耗时 ${formatTestcaseDuration(getTestcaseDurationMs(state.upgrades.speed || 0))} · 队列容量 ${queueCapacity()} · 未完成 ${currentPendingCount()}`;
       }
 
       function renderQueue() {
@@ -896,7 +899,6 @@
         const def = upgradeDefs.find(x => x.key === key);
         if (!def) return;
         const level = state.upgrades[key] || 0;
-        if (level >= def.maxLevel) return;
         const price = getPrice(def);
         if (state.rating < price) return;
         state.rating -= price;
