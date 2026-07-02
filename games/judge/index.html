@@ -622,6 +622,11 @@
         return found ? found.color : 'warn';
       }
 
+      function numericRunId(job) {
+        const runId = Number(job && job.runId);
+        return Number.isFinite(runId) ? runId : 0;
+      }
+
       function currentCooldown() {
         return getCooldownMs(state.upgrades.cooldown || 0);
       }
@@ -824,7 +829,9 @@
       function renderQueue() {
         el.queueCount.textContent = `${currentPendingCount()} / ${queueCapacity()}`;
         const now = Date.now();
-        const visibleJobs = state.queue.concat(state.finished);
+        const visibleJobs = state.queue
+          .concat(state.finished)
+          .sort((a, b) => numericRunId(b) - numericRunId(a));
         if (!visibleJobs.length) {
           el.queueList.innerHTML = '<div class="empty">暂无未完成评测</div>';
           return;
