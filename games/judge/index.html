@@ -34,7 +34,7 @@
       overflow: hidden;
     }
 
-    button, input { font: inherit; }
+    button, input, select { font: inherit; }
     button {
       border: 1px solid var(--line);
       background: #1a2130;
@@ -49,6 +49,33 @@
     button:disabled { opacity: .45; cursor: not-allowed; }
 
     .app { height: 100vh; display: flex; flex-direction: column; }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .fps-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--chip);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .fps-switch label { color: var(--muted); }
+    .fps-switch select {
+      min-width: 76px;
+      border: 1px solid var(--line-2);
+      border-radius: 5px;
+      background: #111827;
+      color: var(--text);
+      padding: 4px 8px;
+      cursor: pointer;
+    }
 
     .topbar {
       min-height: var(--topbar-h);
@@ -353,6 +380,9 @@
         align-items: flex-start;
         flex-direction: column;
       }
+      .topbar-actions {
+        justify-content: flex-start;
+      }
       .main {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto auto;
@@ -376,7 +406,16 @@
         <strong>OJ 评测机 clicker</strong>
         <span>提交、排队、炸机、升级，全部在前端完成</span>
       </div>
-      <div class="stats" id="stats"></div>
+      <div class="topbar-actions">
+        <div class="fps-switch">
+          <label for="fpsSelect">动画刷新率</label>
+          <select id="fpsSelect" aria-label="动画刷新率">
+            <option value="60">60 fps</option>
+            <option value="30">30 fps</option>
+          </select>
+        </div>
+        <div class="stats" id="stats"></div>
+      </div>
     </header>
 
     <main class="main">
@@ -462,6 +501,7 @@
       const BASE_TESTCASE_COUNT = 5;
       const TESTCASE_BASE_MS = 2000;
       const ALL_ACCEPTED_BONUS = 20;
+      const FPS_OPTIONS = [60, 30];
       const FINAL_RESULTS = [
         { key: 'accepted', weight: 34, color: 'good' },
         { key: 'WA', weight: 22, color: 'warn' },
@@ -529,6 +569,7 @@
         submitMeta: document.getElementById('submitMeta'),
         queueList: document.getElementById('queueList'),
         queueCount: document.getElementById('queueCount'),
+        fpsSelect: document.getElementById('fpsSelect'),
         log: document.getElementById('log'),
         bombOverlay: document.getElementById('bombOverlay'),
         closeBomb: document.getElementById('closeBomb')
@@ -548,6 +589,7 @@
         bombCount: 0,
         bombVisible: false,
         log: [],
+        animationFps: 60,
         lastTickAt: Date.now()
       });
 
@@ -588,6 +630,7 @@
         merged.nextBotSubmitAt = Math.max(0, Number(merged.nextBotSubmitAt) || 0);
         merged.bombCount = Math.max(0, Number(merged.bombCount) || 0);
         merged.bombVisible = Boolean(merged.bombVisible);
+        merged.animationFps = FPS_OPTIONS.includes(Number(merged.animationFps)) ? Number(merged.animationFps) : 60;
         merged.lastTickAt = Number(merged.lastTickAt) || Date.now();
         return merged;
       }
@@ -1148,6 +1191,11 @@
         el.bombOverlay.setAttribute('aria-hidden', String(!state.bombVisible));
       }
 
+      function renderFpsSwitch() {
+        if (!el.fpsSelect) return;
+        el.fpsSelect.value = String(FPS_OPTIONS.includes(Number(state.animationFps)) ? state.animationFps : 60);
+      }
+
       function renderAll() {
         renderUpgrades();
         renderStats();
@@ -1155,6 +1203,7 @@
         renderQueue();
         renderLog();
         renderBomb();
+        renderFpsSwitch();
       }
 
       function purchaseSpecial(key) {
@@ -1199,9 +1248,20 @@
         saveState();
       }
 
+      function loopFrame(now) {
+        const fps = FPS_OPTIONS.includes(Number(state.animationFps)) ? Number(state.animationFps) : 60;
+        const frameInterval = 1000 / fps;
+        const lastFrameAt = Number(state.lastFrameAt) || 0;
+        if (!lastFrameAt || now - lastFrameAt >= frameInterval) {
+          state.lastFrameAt = now - ((now - lastFrameAt) % frameInterval);
+          mainLoop();
+        }
+        timer = requestAnimationFrame(loopFrame);
+      }
+
       function startLoop() {
         if (!timer) {
-          timer = setInterval(mainLoop, 250);
+          timer = requestAnimationFrame(loopFrame);
         }
         if (!bootstrapped) {
           window.addEventListener('focus', mainLoop);
@@ -1223,6 +1283,16 @@
         if (!btn) return;
         purchaseUpgrade(btn.dataset.upgrade);
       });
+
+      if (el.fpsSelect) {
+        el.fpsSelect.addEventListener('change', () => {
+          const nextFps = Number(el.fpsSelect.value);
+          state.animationFps = FPS_OPTIONS.includes(nextFps) ? nextFps : 60;
+          state.lastFrameAt = 0;
+          saveState();
+          renderFpsSwitch();
+        });
+      }
 
       if (el.submitBtn) {
         el.submitBtn.addEventListener('click', () => {
