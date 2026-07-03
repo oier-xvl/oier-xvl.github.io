@@ -1027,7 +1027,7 @@
               <span class="badge">${def.effect(level)}</span>
             </div>
             <div class="upgrade-actions">
-              <button class="primary" data-upgrade="${def.key}" ${disabled ? 'disabled' : ''}>购买</button>
+              <button type="button" class="primary" data-upgrade="${def.key}" ${disabled ? 'disabled' : ''}>购买</button>
               <span class="hint">${disabled ? 'rating 不足' : '立即生效'}</span>
             </div>
           `;
@@ -1057,7 +1057,7 @@
               <span class="badge">当前 accepted：${formatNumber(state.accepted)}</span>
             </div>
             <div class="upgrade-actions">
-              <button class="primary" data-special="ioi" ${canBuyIoiRules() ? '' : 'disabled'}>购买</button>
+              <button type="button" class="primary" data-special="ioi" ${canBuyIoiRules() ? '' : 'disabled'}>购买</button>
               <span class="hint">${canBuyIoiRules() ? '购买后该商品消失' : 'accepted 不足'}</span>
             </div>
           `;
@@ -1081,7 +1081,7 @@
             <span class="badge">效果：新 runid 初始得分 +1</span>
           </div>
           <div class="upgrade-actions">
-            <button class="primary" data-special="score" ${canBuyScore() ? '' : 'disabled'}>购买</button>
+            <button type="button" class="primary" data-special="score" ${canBuyScore() ? '' : 'disabled'}>购买</button>
             <span class="hint">${canBuyScore() ? '立即生效' : 'rating 不足'}</span>
           </div>
         `;
@@ -1103,7 +1103,7 @@
             <span class="badge">效果：测试点 ${formatNumber(getTestcaseCount())} → ${formatNumber(getTestcaseCount() + 1)}</span>
           </div>
           <div class="upgrade-actions">
-            <button class="primary" data-special="testcaseCount" ${canBuyTestcaseCount() ? '' : 'disabled'}>购买</button>
+            <button type="button" class="primary" data-special="testcaseCount" ${canBuyTestcaseCount() ? '' : 'disabled'}>购买</button>
             <span class="hint">${canBuyTestcaseCount() ? '立即生效' : 'rating 不足'}</span>
           </div>
         `;
@@ -1299,13 +1299,15 @@
       }
 
       el.upgrades.addEventListener('click', e => {
+        if (!(e.target instanceof Element)) return;
         const specialBtn = e.target.closest('[data-special]');
         if (specialBtn) {
+          if (specialBtn.disabled) return;
           purchaseSpecial(specialBtn.dataset.special);
           return;
         }
         const btn = e.target.closest('[data-upgrade]');
-        if (!btn) return;
+        if (!btn || btn.disabled) return;
         purchaseUpgrade(btn.dataset.upgrade);
       });
 
