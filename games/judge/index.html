@@ -586,6 +586,7 @@
         nextBotSubmitAt: 0,
         upgrades: { cooldown: 0, capacity: 0, accept: 0, testcase: 0, speed: 0, bot: 0, testcaseCount: 0 },
         queue: [],
+        finished: [],
         bombCount: 0,
         bombVisible: false,
         log: [],
@@ -596,6 +597,8 @@
       let state = loadState();
       let timer = null;
       let bootstrapped = false;
+      let lastUpgradeSignature = '';
+      let lastFrameAt = 0;
 
       function loadState() {
         try {
@@ -632,6 +635,7 @@
         merged.bombVisible = Boolean(merged.bombVisible);
         merged.animationFps = FPS_OPTIONS.includes(Number(merged.animationFps)) ? Number(merged.animationFps) : 60;
         merged.lastTickAt = Number(merged.lastTickAt) || Date.now();
+        delete merged.lastFrameAt;
         return merged;
       }
 
@@ -1196,8 +1200,22 @@
         el.fpsSelect.value = String(FPS_OPTIONS.includes(Number(state.animationFps)) ? state.animationFps : 60);
       }
 
+      function upgradeRenderSignature() {
+        return JSON.stringify({
+          rating: Math.floor(state.rating),
+          accepted: Math.floor(state.accepted),
+          score: Math.floor(state.score),
+          ioiEnabled: state.ioiEnabled,
+          upgrades: state.upgrades
+        });
+      }
+
       function renderAll() {
-        renderUpgrades();
+        const upgradeSignature = upgradeRenderSignature();
+        if (upgradeSignature !== lastUpgradeSignature) {
+          renderUpgrades();
+          lastUpgradeSignature = upgradeSignature;
+        }
         renderStats();
         renderSubmit();
         renderQueue();
@@ -1220,6 +1238,7 @@
           state.rating -= getTestcaseCountPrice();
           state.upgrades.testcaseCount = (state.upgrades.testcaseCount || 0) + 1;
         }
+        lastUpgradeSignature = '';
         saveState();
         renderAll();
       }
@@ -1233,6 +1252,7 @@
         state.rating -= price;
         state.upgrades[key] = level + 1;
         // logLine(`购买 ${def.title} Lv.${level + 1}`);
+        lastUpgradeSignature = '';
         saveState();
         renderAll();
       }
@@ -1251,9 +1271,11 @@
       function loopFrame(now) {
         const fps = FPS_OPTIONS.includes(Number(state.animationFps)) ? Number(state.animationFps) : 60;
         const frameInterval = 1000 / fps;
-        const lastFrameAt = Number(state.lastFrameAt) || 0;
+        if (!Number.isFinite(lastFrameAt) || lastFrameAt < 0 || lastFrameAt > now) {
+          lastFrameAt = 0;
+        }
         if (!lastFrameAt || now - lastFrameAt >= frameInterval) {
-          state.lastFrameAt = now - ((now - lastFrameAt) % frameInterval);
+          lastFrameAt = now - ((now - lastFrameAt) % frameInterval);
           mainLoop();
         }
         timer = requestAnimationFrame(loopFrame);
@@ -1266,7 +1288,10 @@
         if (!bootstrapped) {
           window.addEventListener('focus', mainLoop);
           document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) mainLoop();
+            if (!document.hidden) {
+              lastFrameAt = 0;
+              mainLoop();
+            }
           });
           window.addEventListener('beforeunload', saveState);
           bootstrapped = true;
@@ -1288,7 +1313,7 @@
         el.fpsSelect.addEventListener('change', () => {
           const nextFps = Number(el.fpsSelect.value);
           state.animationFps = FPS_OPTIONS.includes(nextFps) ? nextFps : 60;
-          state.lastFrameAt = 0;
+          lastFrameAt = 0;
           saveState();
           renderFpsSwitch();
         });
