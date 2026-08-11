@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#101411">
+  <meta name="description" content="一款暗色水墨风修仙放置点击游戏">
+  <title>问道长生</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#cultivation">跳到修炼区</a>
+
+  <header class="topbar">
+    <div class="brand" aria-label="问道长生">
+      <span class="brand-mark" aria-hidden="true">道</span>
+      <div>
+        <h1>问道长生</h1>
+        <p id="save-status">云篆未启</p>
+      </div>
+    </div>
+
+    <div class="resource-strip" aria-label="主要资源">
+      <div class="resource-item">
+        <span>灵气</span>
+        <strong id="qi-value">0</strong>
+      </div>
+      <div class="resource-item">
+        <span>每息</span>
+        <strong id="qps-value">0</strong>
+      </div>
+      <div class="resource-item stones">
+        <span>灵石</span>
+        <strong id="stone-value">0</strong>
+      </div>
+      <div class="resource-item">
+        <span>寿元</span>
+        <strong id="lifespan-value">--</strong>
+      </div>
+      <div class="resource-item crystal">
+        <span>天道结晶</span>
+        <strong id="crystal-value">0</strong>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="icon-button" id="save-button" type="button" title="立即存档" aria-label="立即存档">存</button>
+      <button class="icon-button" id="help-button" type="button" title="游戏说明" aria-label="游戏说明">?</button>
+    </div>
+  </header>
+
+  <nav class="mobile-tabs" aria-label="区域导航">
+    <button type="button" data-panel="growth">养成</button>
+    <button type="button" data-panel="cultivation" class="active">修炼</button>
+    <button type="button" data-panel="affairs">事务 <span id="mobile-claim-badge" class="claim-badge" hidden></span></button>
+    <button type="button" data-panel="chronicle">道途</button>
+  </nav>
+
+  <main class="game-shell">
+    <aside class="side-panel growth-panel" id="growth" data-game-panel>
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">厚积</span>
+          <h2>洞府养成</h2>
+        </div>
+        <span id="global-multiplier" class="metric-badge">总倍率 ×1</span>
+      </div>
+
+      <div class="category-tabs" id="shop-tabs" role="tablist" aria-label="养成分类">
+        <button type="button" role="tab" aria-selected="true" data-shop-tab="roots">灵根</button>
+        <button type="button" role="tab" aria-selected="false" data-shop-tab="arts">功法</button>
+        <button type="button" role="tab" aria-selected="false" data-shop-tab="arrays">阵法</button>
+        <button type="button" role="tab" aria-selected="false" data-shop-tab="treasures">法宝</button>
+        <button type="button" role="tab" aria-selected="false" data-shop-tab="pills">丹药</button>
+      </div>
+
+      <div class="shop-list" id="shop-list" aria-live="polite"></div>
+    </aside>
+
+    <section class="cultivation-panel active" id="cultivation" data-game-panel tabindex="-1">
+      <div class="realm-header">
+        <div>
+          <span class="eyebrow" id="realm-index">第一境</span>
+          <h2 id="realm-name">练气 · 前期</h2>
+        </div>
+        <div class="realm-meta">
+          <span>本境上限</span>
+          <strong id="realm-cap">100</strong>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-copy">
+          <span id="progress-label">修为进度</span>
+          <strong id="progress-value">0 / 100</strong>
+        </div>
+        <div class="progress-track" role="progressbar" aria-label="修为进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="status-row" id="status-row" aria-label="当前状态"></div>
+
+      <div class="cultivation-stage" id="cultivation-stage">
+        <div class="ink-ring ring-outer" aria-hidden="true"></div>
+        <div class="ink-ring ring-inner" aria-hidden="true"></div>
+        <button class="cultivate-button" id="cultivate-button" type="button">
+          <span class="cultivate-glyph" aria-hidden="true">炼</span>
+          <strong>吐纳修炼</strong>
+          <small id="click-yield">每次 +1 灵气</small>
+        </button>
+        <div id="floating-text-layer" aria-hidden="true"></div>
+      </div>
+
+      <section class="foundation-box" aria-labelledby="foundation-title">
+        <div class="section-title"><h3 id="foundation-title">道基要求</h3><span id="foundation-summary">小阶段无需额外道基</span></div>
+        <ul id="foundation-list"></ul>
+      </section>
+
+      <div class="action-row">
+        <button class="primary-action" id="breakthrough-button" type="button" disabled>
+          <span>破境</span>
+          <small id="breakthrough-chance">成功率 100%</small>
+        </button>
+        <button class="secondary-action" id="consume-pill-button" type="button" disabled>
+          <span>服用丹药</span>
+          <small id="pill-quick-label">暂无库存</small>
+        </button>
+      </div>
+
+      <dl class="stat-grid" aria-label="修炼明细">
+        <div><dt>点击收益</dt><dd id="click-stat">1</dd></div>
+        <div><dt>自动产出</dt><dd id="auto-stat">0 / 秒</dd></div>
+        <div><dt>暴击</dt><dd id="crit-stat">5% · ×2</dd></div>
+        <div><dt>吐纳间隔</dt><dd id="interval-stat">300ms</dd></div>
+      </dl>
+    </section>
+
+    <aside class="side-panel affairs-panel" id="affairs" data-game-panel tabindex="-1">
+      <div class="panel-heading">
+        <div><span class="eyebrow">执事</span><h2>洞府事务</h2></div>
+        <span id="affairs-claim-badge" class="metric-badge">可领 0</span>
+      </div>
+      <div class="affairs-tabs" role="tablist" aria-label="事务分类">
+        <button type="button" role="tab" aria-selected="true" data-affairs-tab="tasks">任务大厅</button>
+        <button type="button" role="tab" aria-selected="false" data-affairs-tab="achievements">成就</button>
+      </div>
+      <section id="tasks-view" class="affairs-view active">
+        <div class="section-title"><h3>十分钟差事</h3><span id="task-countdown">即将刷新</span></div>
+        <div class="task-list" id="task-list"></div>
+        <div class="archive-block"><div class="section-title"><h3>待领归档</h3><span>最多8项 · 保留24小时</span></div><div class="task-list compact" id="task-archive"></div></div>
+      </section>
+      <section id="achievements-view" class="affairs-view">
+        <div class="section-title"><h3>永久成就</h3><span id="achievement-summary">0 / 0</span></div>
+        <div class="achievement-list" id="achievement-list"></div>
+      </section>
+    </aside>
+
+    <aside class="side-panel chronicle-panel" id="chronicle" data-game-panel>
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">回首</span>
+          <h2>道途纪要</h2>
+        </div>
+        <span id="generation-label" class="metric-badge">第 1 世</span>
+      </div>
+
+      <section class="unframed-section">
+        <div class="section-title">
+          <h3>奇遇风声</h3>
+          <span id="encounter-timer">天机未显</span>
+        </div>
+        <div class="event-log" id="event-log" aria-live="polite"></div>
+      </section>
+
+      <section class="unframed-section rebirth-section">
+        <div class="section-title">
+          <h3>轮回道场</h3>
+          <span id="rebirth-gain">可得 0 结晶</span>
+        </div>
+        <p id="rebirth-hint">抵达更高境界、积累更多灵气，可凝聚更多天道结晶。</p>
+        <button class="danger-action" id="rebirth-button" type="button">兵解重修</button>
+      </section>
+
+      <section class="unframed-section talent-section">
+        <div class="section-title">
+          <h3>天道天赋</h3>
+          <span id="talent-count">0 / 0</span>
+        </div>
+        <div class="talent-list" id="talent-list"></div>
+      </section>
+    </aside>
+  </main>
+
+  <button class="encounter-orb" id="encounter-orb" type="button" hidden aria-label="发现机缘">
+    <span aria-hidden="true">缘</span>
+    <small>机缘掠影</small>
+  </button>
+  <button class="combat-orb" id="combat-orb" type="button" hidden aria-label="接受随机切磋" title="接受随机切磋">
+    <span aria-hidden="true">战</span>
+    <small>切磋邀约</small>
+  </button>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <dialog class="game-dialog" id="encounter-dialog">
+    <form method="dialog">
+      <div class="dialog-heading">
+        <span class="dialog-seal" aria-hidden="true">缘</span>
+        <div>
+          <span class="eyebrow">一念之间</span>
+          <h2 id="encounter-title">奇遇</h2>
+        </div>
+      </div>
+      <p id="encounter-description"></p>
+      <div class="choice-list" id="encounter-choices"></div>
+    </form>
+  </dialog>
+
+  <dialog class="game-dialog combat-dialog" id="combat-dialog" aria-labelledby="combat-title">
+    <div class="dialog-heading combat-heading">
+      <span class="dialog-seal warning" aria-hidden="true">斗</span>
+      <div>
+        <span class="eyebrow" id="combat-source">切磋</span>
+        <h2 id="combat-title">回合制战斗</h2>
+      </div>
+      <strong id="combat-turn-label">玩家回合</strong>
+    </div>
+    <div class="combatants">
+      <section class="combatant player-combatant" aria-labelledby="combat-player-name">
+        <header><h3 id="combat-player-name">道友</h3><span id="combat-player-hp-text">0 / 0</span></header>
+        <div class="combat-hp" role="progressbar" aria-label="玩家生命" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="combat-player-hp"></span></div>
+        <div class="combat-meta"><span id="combat-resolve">战意 3 / 6</span><span id="combat-player-stats">攻 0 · 防 0</span></div>
+        <div class="combat-buffs" id="combat-player-buffs" aria-label="玩家战斗状态"></div>
+      </section>
+      <section class="combatant enemy-combatant" aria-labelledby="combat-enemy-name">
+        <header><h3 id="combat-enemy-name">敌手</h3><span id="combat-enemy-hp-text">0 / 0</span></header>
+        <div class="combat-hp enemy" role="progressbar" aria-label="敌方生命" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="combat-enemy-hp"></span></div>
+        <div class="combat-meta"><span id="combat-enemy-type">未知</span><span id="combat-enemy-stats">攻 0 · 防 0</span></div>
+        <div class="combat-buffs" id="combat-enemy-buffs" aria-label="敌方战斗状态"></div>
+      </section>
+    </div>
+    <div class="combat-body">
+      <div class="combat-controls" id="combat-controls" aria-label="战斗操作">
+        <button type="button" data-combat-action="attack">普通攻击<small>战意 +1</small></button>
+        <button type="button" data-combat-action="defend">防御<small>减伤45% · 战意 +2</small></button>
+        <button type="button" data-combat-action="charge">蓄力<small>攻势+35% · 战意 +3</small></button>
+        <button type="button" data-combat-action="spell">术法<small id="combat-spell-label">消耗3战意</small></button>
+        <button type="button" data-combat-action="retreat">撤退<small id="combat-retreat-label">成功率70%</small></button>
+        <button type="button" id="combat-pill-toggle">战斗丹药<small id="combat-pill-label">选择丹药</small></button>
+      </div>
+      <div class="combat-pill-list" id="combat-pill-list" hidden></div>
+      <section class="combat-log-panel" aria-labelledby="combat-log-title">
+        <h3 id="combat-log-title">战况</h3>
+        <ol id="combat-log"></ol>
+      </section>
+    </div>
+    <button class="primary-action full-width" id="combat-finish-button" type="button" hidden>结束战斗</button>
+  </dialog>
+
+  <dialog class="game-dialog compact-dialog" id="confirm-dialog">
+    <form method="dialog">
+      <div class="dialog-heading">
+        <span class="dialog-seal warning" aria-hidden="true">慎</span>
+        <div>
+          <span class="eyebrow">此念不可轻回</span>
+          <h2 id="confirm-title">确认</h2>
+        </div>
+      </div>
+      <p id="confirm-description"></p>
+      <div class="dialog-actions">
+        <button class="ghost-action" value="cancel">取消</button>
+        <button class="danger-action" id="confirm-action" value="confirm">确认</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="game-dialog compact-dialog" id="notice-dialog">
+    <form method="dialog">
+      <div class="dialog-heading">
+        <span class="dialog-seal" aria-hidden="true">记</span>
+        <div>
+          <span class="eyebrow" id="notice-eyebrow">重返洞府</span>
+          <h2 id="notice-title">离线结算</h2>
+        </div>
+      </div>
+      <div id="notice-content"></div>
+      <button class="primary-action full-width" value="close">收下</button>
+    </form>
+  </dialog>
+
+  <dialog class="game-dialog compact-dialog" id="help-dialog">
+    <form method="dialog">
+      <div class="dialog-heading">
+        <span class="dialog-seal" aria-hidden="true">诀</span>
+        <div>
+          <span class="eyebrow">修行要略</span>
+          <h2>问道手札</h2>
+        </div>
+      </div>
+      <div class="help-content">
+        <p>吐纳获得灵气；任务大厅产出永久灵石。灵根消耗灵气，功法消耗灵石与少量灵气，阵法、法宝和丹药消耗灵石。</p>
+        <p>大境界突破除灵气圆满外还需满足道基清单；金丹境起可能失败并进入虚弱。</p>
+        <p>寿元按现实时间流逝。兵解或寿尽后，今世修为归零；灵石、任务、成就、天道结晶与永久天赋保留。</p>
+        <p>存档每 10 秒自动写入本机，也会在关键操作后立即保存。离线收益最多结算 24 小时。</p>
+      </div>
+      <button class="primary-action full-width" value="close">已阅</button>
+    </form>
+  </dialog>
+
+  <noscript>此游戏需要启用 JavaScript 才能运行。</noscript>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
