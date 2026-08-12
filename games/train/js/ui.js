@@ -37,7 +37,9 @@ let lastTalentSignature = "";
 let lastLogSignature = "";
 let lastTaskSignature = "";
 let lastAchievementSignature = "";
+let lastCombatPillSignature = "";
 let combatPillsExpanded = false;
+const pressedButtons = new WeakSet();
 
 function escapeHtml(value) {
   const entities = { "&": "\u0026amp;", "<": "\u0026lt;", ">": "\u0026gt;", '"': "\u0026quot;", "'": "\u0026#039;" };
@@ -46,6 +48,20 @@ function escapeHtml(value) {
 
 function setText(element, value) {
   if (element && element.textContent !== String(value)) element.textContent = value;
+}
+
+function setButtonDisabled(button, disabled) {
+  if (button && !pressedButtons.has(button) && button.disabled !== disabled) button.disabled = disabled;
+}
+
+function rememberPressedButton(event) {
+  const button = event.target.closest?.("button");
+  if (button) pressedButtons.add(button);
+}
+
+function releasePressedButton(event) {
+  const button = event.target.closest?.("button");
+  if (button) window.setTimeout(() => pressedButtons.delete(button), 0);
 }
 
 function showDialog(dialog) {
@@ -85,18 +101,18 @@ export function render(state, now = Date.now(), force = false) {
   setText(elements.critStat, `${formatPercent(stats.critChance * 100, 1)} · ×${formatNumber(stats.critDamage, 1)}`);
   setText(elements.intervalStat, `${Math.round(stats.clickIntervalMs)}ms`);
   setText(elements.breakthroughChance, stage.isFinal ? "已证此世极境" : `成功率 ${formatPercent(stats.successChance * 100, 1)}`);
-  elements.breakthroughButton.disabled = !breakthrough.ok;
+  setButtonDisabled(elements.breakthroughButton, !breakthrough.ok);
   elements.breakthroughButton.title = breakthrough.ok ? "消耗本阶上限灵气尝试破境" : breakthrough.reason;
-  elements.cultivateButton.disabled = state.run.lifespanRemaining <= 0 || combatLocked;
+  setButtonDisabled(elements.cultivateButton, state.run.lifespanRemaining <= 0 || combatLocked);
   elements.cultivateButton.title = combatLocked ? "战斗中无法吐纳" : "吐纳修炼";
-  elements.consumePillButton.disabled = pills.length === 0 || state.run.lifespanRemaining <= 0 || combatLocked;
+  setButtonDisabled(elements.consumePillButton, pills.length === 0 || state.run.lifespanRemaining <= 0 || combatLocked);
   elements.consumePillButton.title = combatLocked ? "战斗中请使用战斗丹药" : "服用修炼丹药";
   setText(elements.pillQuickLabel, pills.length ? `${pills[0].name} ×${state.run.inventory[pills[0].id]}` : "暂无库存");
   setText(elements.generationLabel, `第 ${state.generation} 世`);
   setText(elements.rebirthGain, `可得 ${formatNumber(getRebirthReward(state))} 结晶`);
   setText(elements.rebirthHint, state.run.lifespanRemaining <= 0 ? "寿元已尽。轮回后灵石、任务、成就、结晶和永久天赋保留。" : "抵达更高境界、积累更多灵气，可凝聚更多天道结晶。");
   elements.rebirthButton.textContent = state.run.lifespanRemaining <= 0 ? "寿尽轮回" : "兵解重修";
-  elements.rebirthButton.disabled = combatLocked;
+  setButtonDisabled(elements.rebirthButton, combatLocked);
   elements.rebirthButton.title = combatLocked ? "请先完成当前战斗" : "结束本世并进入轮回";
   renderFoundation(state);
   renderStatuses(state, stats, now);
@@ -138,7 +154,7 @@ function renderEncounterIndicator(state, now) {
   const validation = state.run.encounterAvailable ? validatePendingEncounter(state, now) : { valid: false };
   const visible = validation.valid && !isCombatBlocking(state);
   elements.encounterOrb.hidden = !visible;
-  elements.encounterOrb.disabled = !visible;
+  setButtonDisabled(elements.encounterOrb, !visible);
   if (validation.valid) setText(elements.encounterTimer, isCombatBlocking(state) ? "战后可应缘" : `剩余 ${formatDuration((state.run.encounterExpiresAt - now) / 1000, true)}`);
   else setText(elements.encounterTimer, state.run.nextEncounterAt > now ? `约 ${formatDuration((state.run.nextEncounterAt - now) / 1000, true)}` : "天机将显");
 }
@@ -147,42 +163,58 @@ function renderSkirmishIndicator(state, now) {
   const available = state.run.skirmish.available && state.run.skirmish.expiresAt > now;
   const visible = available && !isCombatBlocking(state) && now >= state.run.skirmish.cooldownUntil;
   elements.combatOrb.hidden = !visible;
-  elements.combatOrb.disabled = !visible;
+  setButtonDisabled(elements.combatOrb, !visible);
   elements.combatOrb.title = visible ? `切磋邀约剩余 ${formatDuration((state.run.skirmish.expiresAt - now) / 1000, true)}` : "暂无可接受的切磋";
 }
 
 function renderShop(state, force) {
   const category = SHOP_CATEGORIES[activeShopTab];
-  const signature = `${activeShopTab}|${state.run.stageIndex}|${Math.floor(state.run.qi)}|${state.spiritStones}|${isCombatBlocking(state)}|${category.items.map((item) => getItemLevel(state, item)).join("|")}`;
-  if (!force && signature === lastShopSignature) return;
-  lastShopSignature = signature;
+  const signature = `${activeShopTab}|${category.items.map((item) => item.id).join("|")}`;
+  if (signature !== lastShopSignature) {
+    lastShopSignature = signature;
+    elements.shopList.innerHTML = category.items.map((item) => `<article class="shop-item" data-shop-item="${item.id}"><span class="item-glyph" aria-hidden="true">${escapeHtml(item.glyph)}</span><div class="item-info"><strong>${escapeHtml(item.name)}</strong><p>${escapeHtml(item.description)} · <span class="item-level"></span></p></div><button class="buy-button" type="button" data-buy-item="${item.id}"><span class="button-label"></span><small></small></button></article>`).join("");
+  }
   const realmIndex = getRealmIndex(state.run.stageIndex);
-  elements.shopList.innerHTML = category.items.map((item) => {
+  for (const item of category.items) {
+    const article = elements.shopList.querySelector(`[data-shop-item="${item.id}"]`);
+    const button = article?.querySelector("[data-buy-item]");
     const level = getItemLevel(state, item);
     const cost = getItemCost(state, item);
     const check = canPurchaseItem(state, item);
     const locked = realmIndex < item.unlockRealm;
     const levelText = item.buffId ? `库存 ${level}/${item.maxStock}` : `等级 ${level}/${item.maxLevel}`;
     const buttonText = locked ? REALMS[item.unlockRealm].name : ["已至圆满", "库存已满"].includes(check.reason) ? (check.reason === "已至圆满" ? "圆满" : "已满") : check.ok ? "购置" : check.reason;
-    return `<article class="shop-item"><span class="item-glyph" aria-hidden="true">${escapeHtml(item.glyph)}</span><div class="item-info"><strong>${escapeHtml(item.name)}</strong><p>${escapeHtml(item.description)} · <span class="item-level">${escapeHtml(levelText)}</span></p></div><button class="buy-button" type="button" data-buy-item="${item.id}" ${check.ok ? "" : "disabled"} title="${escapeHtml(check.ok ? `消耗 ${formatCost(cost)}` : check.reason)}">${escapeHtml(buttonText)}<small>${locked ? "尚未解锁" : escapeHtml(formatCost(cost))}</small></button></article>`;
-  }).join("");
+    setText(article?.querySelector(".item-level"), levelText);
+    setText(button?.querySelector(".button-label"), buttonText);
+    setText(button?.querySelector("small"), locked ? "尚未解锁" : formatCost(cost));
+    setButtonDisabled(button, !check.ok);
+    if (button) button.title = check.ok ? `消耗 ${formatCost(cost)}` : check.reason;
+  }
 }
 
 function renderTalents(state, force) {
-  const signature = `${state.crystals}|${isCombatBlocking(state)}|${TALENTS.map((talent) => state.talents[talent.id]).join("|")}`;
-  if (!force && signature === lastTalentSignature) return;
-  lastTalentSignature = signature;
+  const signature = TALENTS.map((talent) => talent.id).join("|");
+  if (signature !== lastTalentSignature) {
+    lastTalentSignature = signature;
+    elements.talentList.innerHTML = TALENTS.map((talent) => `<div class="talent-item" data-talent-item="${talent.id}"><div><strong>${escapeHtml(talent.glyph)} · ${escapeHtml(talent.name)} <span class="item-level"></span></strong><p>${escapeHtml(talent.description)}</p></div><button type="button" data-buy-talent="${talent.id}"></button></div>`).join("");
+  }
   const owned = TALENTS.reduce((sum, talent) => sum + Math.min(talent.maxLevel, state.talents[talent.id] || 0), 0);
   const total = TALENTS.reduce((sum, talent) => sum + talent.maxLevel, 0);
   setText(elements.talentCount, `${owned} / ${total}`);
-  elements.talentList.innerHTML = TALENTS.map((talent) => {
+  for (const talent of TALENTS) {
+    const row = elements.talentList.querySelector(`[data-talent-item="${talent.id}"]`);
+    const button = row?.querySelector("[data-buy-talent]");
     const level = Math.max(0, state.talents[talent.id] || 0);
     const maxed = level >= talent.maxLevel;
     const cost = getTalentCost(state, talent);
     const disabled = maxed || state.crystals < cost || isCombatBlocking(state);
     const title = isCombatBlocking(state) ? "战斗中无法参悟" : maxed ? "已完全点亮" : `消耗 ${formatNumber(cost)} 天道结晶`;
-    return `<div class="talent-item ${level ? "owned" : ""}"><div><strong>${escapeHtml(talent.glyph)} · ${escapeHtml(talent.name)} <span class="item-level">${level}/${talent.maxLevel}</span></strong><p>${escapeHtml(talent.description)}</p></div><button type="button" data-buy-talent="${talent.id}" ${disabled ? "disabled" : ""} title="${escapeHtml(title)}">${maxed ? "已悟" : formatNumber(cost)}</button></div>`;
-  }).join("");
+    row?.classList.toggle("owned", level > 0);
+    setText(row?.querySelector(".item-level"), `${level}/${talent.maxLevel}`);
+    setText(button, maxed ? "已悟" : formatNumber(cost));
+    setButtonDisabled(button, disabled);
+    if (button) button.title = title;
+  }
 }
 
 function renderLogs(state, force) {
@@ -192,29 +224,42 @@ function renderLogs(state, force) {
   elements.eventLog.innerHTML = state.run.logs.length ? state.run.logs.map((entry) => `<div class="log-entry"><strong>${escapeHtml(entry.title)}</strong><span>${escapeHtml(entry.text)}</span><time datetime="${new Date(entry.time).toISOString()}">${new Date(entry.time).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</time></div>`).join("") : '<p class="log-entry">道途尚无留痕。</p>';
 }
 
-function taskCard(state, task, now, archived = false) {
+function taskCard(task, archived = false) {
+  const challenge = task.combat && !archived ? `<button class="challenge-button" type="button" data-challenge-task="${escapeHtml(task.id)}"></button>` : "";
+  return `<article class="task-card" data-task-card="${escapeHtml(task.id)}"><header><strong>${escapeHtml(task.name)}</strong><span>${task.reward} 灵石</span></header><p>${escapeHtml(task.description)}</p><div class="task-progress"><span></span></div><div class="card-footer"><span class="task-progress-label"></span><span class="task-actions">${challenge}<button class="claim-button" type="button" data-claim-task="${escapeHtml(task.id)}"></button></span></div></article>`;
+}
+
+function updateTaskCard(state, task, now, archived = false) {
+  const container = archived ? elements.taskArchive : elements.taskList;
+  const card = [...container.querySelectorAll("[data-task-card]")].find((entry) => entry.dataset.taskCard === task.id);
+  if (!card) return;
   const ratio = Math.min(1, task.progress / task.target);
   const complete = Boolean(task.completedAt);
   const label = task.event === "stageProgress" ? `${formatPercent(task.progress * 100, 0)} / ${formatPercent(task.target * 100, 0)}` : `${formatNumber(task.progress)} / ${formatNumber(task.target)}`;
-  let challenge = "";
-  if (task.combat && !archived) {
+  card.querySelector(".task-progress span").style.width = `${ratio * 100}%`;
+  setText(card.querySelector(".task-progress-label"), `${label}${archived ? " · 已归档" : ""}`);
+  const challengeButton = card.querySelector("[data-challenge-task]");
+  if (challengeButton) {
     const check = getTaskChallenge(state, task.id, now);
-    const challengeLabel = complete ? "已完成" : task.retryAt > now ? `${Math.ceil((task.retryAt - now) / 1000)}秒` : "挑战";
-    challenge = `<button class="challenge-button" type="button" data-challenge-task="${escapeHtml(task.id)}" ${check.ok && !isCombatBlocking(state) ? "" : "disabled"} title="${escapeHtml(isCombatBlocking(state) ? "请先完成当前战斗" : check.ok ? "开始任务战" : check.reason)}">${challengeLabel}</button>`;
+    setText(challengeButton, complete ? "已完成" : task.retryAt > now ? `${Math.ceil((task.retryAt - now) / 1000)}秒` : "挑战");
+    setButtonDisabled(challengeButton, !check.ok || isCombatBlocking(state));
+    challengeButton.title = isCombatBlocking(state) ? "请先完成当前战斗" : check.ok ? "开始任务战" : check.reason;
   }
-  return `<article class="task-card"><header><strong>${escapeHtml(task.name)}</strong><span>${task.reward} 灵石</span></header><p>${escapeHtml(task.description)}</p><div class="task-progress"><span style="width:${ratio * 100}%"></span></div><div class="card-footer"><span>${label}${archived ? " · 已归档" : ""}</span><span class="task-actions">${challenge}<button class="claim-button" data-claim-task="${escapeHtml(task.id)}" ${complete && !task.claimedAt && !isCombatBlocking(state) ? "" : "disabled"}>${task.claimedAt ? "已领" : complete ? "领取" : "进行中"}</button></span></div></article>`;
+  const claimButton = card.querySelector("[data-claim-task]");
+  setText(claimButton, task.claimedAt ? "已领" : complete ? "领取" : "进行中");
+  setButtonDisabled(claimButton, !complete || Boolean(task.claimedAt) || isCombatBlocking(state));
 }
 
 function renderTasks(state, now, force) {
   setText(elements.taskCountdown, state.tasks.claimCooldownUntil > now ? `防护冷却 ${formatDuration((state.tasks.claimCooldownUntil - now) / 1000, true)}` : `${formatDuration(getTaskCountdown(state, now) / 1000, true)} 后刷新`);
-  const signature = `${state.tasks.windowId}|${isCombatBlocking(state)}|${state.tasks.active.map((task) => `${task.id}:${task.progress}:${task.completedAt}:${task.claimedAt}:${task.retryAt}`).join("|")}|${state.tasks.archive.map((task) => task.id).join("|")}`;
-  if (!force && signature === lastTaskSignature) {
-    updateClaimBadge(state);
-    return;
+  const signature = `${state.tasks.windowId}|${state.tasks.active.map((task) => task.id).join("|")}|${state.tasks.archive.map((task) => task.id).join("|")}`;
+  if (signature !== lastTaskSignature) {
+    lastTaskSignature = signature;
+    elements.taskList.innerHTML = state.tasks.active.map((task) => taskCard(task)).join("") || '<p class="empty-state">当前窗口暂无可用任务。</p>';
+    elements.taskArchive.innerHTML = state.tasks.archive.map((task) => taskCard(task, true)).join("") || '<p class="empty-state">暂无待领归档。</p>';
   }
-  lastTaskSignature = signature;
-  elements.taskList.innerHTML = state.tasks.active.map((task) => taskCard(state, task, now)).join("") || '<p class="empty-state">当前窗口暂无可用任务。</p>';
-  elements.taskArchive.innerHTML = state.tasks.archive.map((task) => taskCard(state, task, now, true)).join("") || '<p class="empty-state">暂无待领归档。</p>';
+  for (const task of state.tasks.active) updateTaskCard(state, task, now);
+  for (const task of state.tasks.archive) updateTaskCard(state, task, now, true);
   updateClaimBadge(state);
 }
 
@@ -223,21 +268,24 @@ function rewardText(reward) {
 }
 
 function renderAchievements(state, force) {
-  const signature = `${isCombatBlocking(state)}|${ACHIEVEMENTS.map((achievement) => { const entry = state.achievements.entries[achievement.id]; return `${achievement.id}:${entry?.unlockedAt}:${entry?.claimedAt}:${getAchievementProgress(state, achievement)}`; }).join("|")}`;
-  if (!force && signature === lastAchievementSignature) {
-    updateClaimBadge(state);
-    return;
+  const signature = ACHIEVEMENTS.map((achievement) => achievement.id).join("|");
+  if (signature !== lastAchievementSignature) {
+    lastAchievementSignature = signature;
+    elements.achievementList.innerHTML = ACHIEVEMENTS.map((achievement) => `<article class="achievement-card" data-achievement-card="${achievement.id}"><header><strong>${escapeHtml(achievement.category)} · ${escapeHtml(achievement.name)}</strong><span>${escapeHtml(rewardText(achievement.reward))}</span></header><p>${escapeHtml(achievement.guide)}</p><div class="task-progress"><span></span></div><div class="card-footer"><span class="achievement-progress-label"></span><button class="claim-button" type="button" data-claim-achievement="${achievement.id}"></button></div></article>`).join("");
   }
-  lastAchievementSignature = signature;
   const unlocked = ACHIEVEMENTS.filter((achievement) => state.achievements.entries[achievement.id]?.unlockedAt).length;
   setText(elements.achievementSummary, `${unlocked} / ${ACHIEVEMENTS.length}`);
-  elements.achievementList.innerHTML = ACHIEVEMENTS.map((achievement) => {
+  for (const achievement of ACHIEVEMENTS) {
+    const card = elements.achievementList.querySelector(`[data-achievement-card="${achievement.id}"]`);
     const entry = state.achievements.entries[achievement.id];
     const progress = getAchievementProgress(state, achievement);
     const complete = Boolean(entry?.unlockedAt);
-    const ratio = Math.min(1, progress / achievement.target);
-    return `<article class="achievement-card"><header><strong>${escapeHtml(achievement.category)} · ${escapeHtml(achievement.name)}</strong><span>${escapeHtml(rewardText(achievement.reward))}</span></header><p>${escapeHtml(achievement.guide)}</p><div class="task-progress"><span style="width:${ratio * 100}%"></span></div><div class="card-footer"><span>${formatNumber(progress)} / ${formatNumber(achievement.target)}</span><button class="claim-button" data-claim-achievement="${achievement.id}" ${complete && !entry.claimedAt && !isCombatBlocking(state) ? "" : "disabled"}>${entry?.claimedAt ? "已领" : complete ? "领取" : "未解锁"}</button></div></article>`;
-  }).join("");
+    card.querySelector(".task-progress span").style.width = `${Math.min(1, progress / achievement.target) * 100}%`;
+    setText(card.querySelector(".achievement-progress-label"), `${formatNumber(progress)} / ${formatNumber(achievement.target)}`);
+    const button = card.querySelector("[data-claim-achievement]");
+    setText(button, entry?.claimedAt ? "已领" : complete ? "领取" : "未解锁");
+    setButtonDisabled(button, !complete || Boolean(entry?.claimedAt) || isCombatBlocking(state));
+  }
   updateClaimBadge(state);
 }
 
@@ -294,22 +342,35 @@ function renderCombat(state) {
   elements.combatEnemyBuffs.innerHTML = enemyBuffMarkup(combat);
   const playerTurn = combat.status === "playerTurn";
   for (const button of elements.combatControls.querySelectorAll("[data-combat-action]")) {
-    button.disabled = !playerTurn || (button.dataset.combatAction === "spell" && (combat.player.resolve < 3 || combat.player.spellCooldown > 0));
+    setButtonDisabled(button, !playerTurn || (button.dataset.combatAction === "spell" && (combat.player.resolve < 3 || combat.player.spellCooldown > 0)));
     button.title = !playerTurn ? "等待当前回合结束" : button.dataset.combatAction === "spell" && combat.player.resolve < 3 ? "战意不足" : button.dataset.combatAction === "spell" && combat.player.spellCooldown > 0 ? `冷却剩余 ${combat.player.spellCooldown} 回合` : "";
   }
   setText(elements.combatSpellLabel, combat.player.spellCooldown ? `冷却 ${combat.player.spellCooldown} 回合` : "消耗3战意");
   setText(elements.combatRetreatLabel, `成功率${combat.playerTurnNumber <= 2 ? 70 : 85}%`);
   const combatPills = SHOP_CATEGORIES.pills.items.filter((pill) => pill.combatPill);
   const stock = combatPills.reduce((sum, pill) => sum + state.run.inventory[pill.id], 0);
-  elements.combatPillToggle.disabled = !playerTurn || stock <= 0;
+  setButtonDisabled(elements.combatPillToggle, !playerTurn || stock <= 0);
   setText(elements.combatPillLabel, stock ? `库存 ${stock}` : "无可用丹药");
   elements.combatPillList.hidden = !combatPillsExpanded || !playerTurn;
-  elements.combatPillList.innerHTML = combatPills.map((pill) => `<button type="button" data-combat-pill="${pill.id}" ${state.run.inventory[pill.id] > 0 && playerTurn ? "" : "disabled"}>${escapeHtml(pill.name)} ×${state.run.inventory[pill.id]}<br><small>${escapeHtml(pill.description)}</small></button>`).join("");
-  elements.combatLog.innerHTML = combat.logs.slice(-8).map((entry) => `<li>${escapeHtml(entry)}</li>`).join("");
+  const pillSignature = combatPills.map((pill) => pill.id).join("|");
+  if (pillSignature !== lastCombatPillSignature) {
+    lastCombatPillSignature = pillSignature;
+    elements.combatPillList.innerHTML = combatPills.map((pill) => `<button type="button" data-combat-pill="${pill.id}"><span></span><br><small>${escapeHtml(pill.description)}</small></button>`).join("");
+  }
+  for (const pill of combatPills) {
+    const button = elements.combatPillList.querySelector(`[data-combat-pill="${pill.id}"]`);
+    setText(button?.querySelector("span"), `${pill.name} ×${state.run.inventory[pill.id]}`);
+    setButtonDisabled(button, state.run.inventory[pill.id] <= 0 || !playerTurn);
+  }
+  const logMarkup = combat.logs.slice(-8).map((entry) => `<li>${escapeHtml(entry)}</li>`).join("");
+  if (elements.combatLog.dataset.signature !== logMarkup) {
+    elements.combatLog.dataset.signature = logMarkup;
+    elements.combatLog.innerHTML = logMarkup;
+  }
   elements.combatLog.scrollTop = elements.combatLog.scrollHeight;
   const terminal = ["victory", "defeat", "retreated"].includes(combat.status);
   elements.combatFinishButton.hidden = !terminal;
-  elements.combatFinishButton.disabled = !terminal;
+  setButtonDisabled(elements.combatFinishButton, !terminal);
   setText(elements.combatFinishButton, combat.status === "victory" ? "领取战果" : combat.status === "defeat" ? "接受落败" : "确认撤退");
 }
 
@@ -318,6 +379,9 @@ function preventCombatDialogCancel(event) {
 }
 
 export function bindUI(state, actions) {
+  document.addEventListener("pointerdown", rememberPressedButton, true);
+  document.addEventListener("pointerup", releasePressedButton, true);
+  document.addEventListener("pointercancel", releasePressedButton, true);
   elements.combatDialog.addEventListener("cancel", preventCombatDialogCancel);
   elements.cultivateButton.addEventListener("click", (event) => actions.onCultivate(event));
   elements.breakthroughButton.addEventListener("click", () => actions.onBreakthrough());
@@ -419,6 +483,28 @@ export function showFloatingText(event, amount, critical = false) {
   window.setTimeout(() => text.remove(), 950);
 }
 
+export function runRenderStabilityAssertions(state, now = Date.now()) {
+  render(state, now, true);
+  const selectors = [
+    "#shop-list button", "#talent-list button", "#task-list button", "#task-archive button",
+    "#achievement-list button", "#combat-pill-list button"
+  ];
+  const before = selectors.flatMap((selector) => [...document.querySelectorAll(selector)]);
+  render(state, now + 100, true);
+  const after = selectors.flatMap((selector) => [...document.querySelectorAll(selector)]);
+  if (before.length !== after.length || before.some((button, index) => button !== after[index])) {
+    throw new Error("重复渲染替换了交互按钮节点");
+  }
+  for (const button of before) {
+    rememberPressedButton({ target: button });
+    const original = button.disabled;
+    setButtonDisabled(button, !original);
+    if (button.disabled !== original) throw new Error("按压期间按钮禁用状态发生变化");
+    pressedButtons.delete(button);
+  }
+  return { stableButtons: before.length, delegatedContainers: 6 };
+}
+
 export function updateSaveStatus(success, manual = false) {
   setText(elements.saveStatus, success ? `${manual ? "手动" : "自动"}存档 · ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}` : "存档失败 · 请检查浏览器权限");
 }
@@ -429,4 +515,5 @@ export function invalidateDynamicLists() {
   lastLogSignature = "";
   lastTaskSignature = "";
   lastAchievementSignature = "";
+  lastCombatPillSignature = "";
 }

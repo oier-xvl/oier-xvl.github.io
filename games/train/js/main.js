@@ -39,12 +39,16 @@ let lastEncounterNotice = state.run.encounterAvailable ? state.run.encounterAnno
 let lastSkirmishNotice = state.run.skirmish.available ? state.run.skirmish.announcedId : "";
 
 function withOperationLock(callback) {
-  if (operationLocked) return;
+  if (operationLocked) return false;
   operationLocked = true;
   try {
     callback();
+    return true;
+  } catch (error) {
+    console.error("游戏操作执行失败，操作锁已释放。", error);
+    throw error;
   } finally {
-    window.setTimeout(() => { operationLocked = false; }, 80);
+    operationLocked = false;
   }
 }
 

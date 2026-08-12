@@ -1,4 +1,4 @@
-import { ENCOUNTER_TTL_MS, ITEM_BY_ID, SKIRMISH_TTL_MS } from "./config.js";
+import { ENCOUNTER_TTL_MS, ITEM_BY_ID, REALMS, SHOP_CATEGORIES, SKIRMISH_TTL_MS, getStageDefinition } from "./config.js";
 import { ACHIEVEMENT_BY_ID, claimAchievement, evaluateAchievements } from "./achievements.js";
 import {
   closeSettledCombat, playerAction, runEnemyTurn, sanitizeCombatState, settleCombat, startCombat,
@@ -7,11 +7,88 @@ import {
 import { ENCOUNTERS, resolveEncounter, validatePendingEncounter } from "./events.js";
 import { advanceTime, attemptBreakthrough, canBreakthrough, getDerivedStats, getItemCost, manualCultivate, performRebirth, purchaseItem } from "./mechanics.js";
 import { createDefaultState, grantQi, loseQi, sanitizeState } from "./state.js";
-import { applyTaskCombatResult, claimTask, generateTasks, getTaskChallenge, syncTaskWindow, TASK_WINDOW_MS, updateTaskProgress } from "./tasks.js";
+import { applyTaskCombatResult, calculateTaskReward, claimTask, generateTasks, getTaskChallenge, syncTaskWindow, TASK_WINDOW_MS, updateTaskProgress } from "./tasks.js";
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function assertEqual(actual, expected, message) { assert(actual === expected, `${message}：期望 ${expected}，实际 ${actual}`); }
 function assertNear(actual, expected, tolerance, message) { assert(Math.abs(actual - expected) <= tolerance, `${message}：期望约 ${expected}，实际 ${actual}`); }
 function cappedState(qi = 95, now = 1_000_000) { const state = createDefaultState(now); state.run.qi = qi; state.run.lifespanRemaining = 10_000; return state; }
+
+const BALANCED_INVESTMENT_PLANS = [
+  { arts: [7, 0, 0, 0, 0], arrays: [2, 0, 0, 0] },
+  { arts: [7, 2, 0, 0, 0], arrays: [3, 0, 0, 0] },
+  { arts: [11, 5, 2, 0, 0], arrays: [5, 1, 0, 0] },
+  { arts: [15, 8, 4, 1, 0], arrays: [7, 2, 0, 0] },
+  { arts: [19, 11, 7, 3, 0], arrays: [9, 4, 1, 0] },
+  { arts: [23, 14, 10, 6, 1], arrays: [11, 6, 2, 0] },
+  { arts: [27, 18, 13, 9, 3], arrays: [13, 8, 4, 1] },
+  { arts: [31, 22, 16, 12, 6], arrays: [15, 10, 6, 3] },
+  { arts: [35, 26, 20, 16, 10], arrays: [17, 12, 8, 5] }
+];
+
+function applyInvestmentPlan(state, plan) {
+  SHOP_CATEGORIES.arts.items.forEach((item, index) => { state.run.upgrades[item.id] = Math.min(item.maxLevel, plan.arts[index] || 0); });
+  SHOP_CATEGORIES.arrays.items.forEach((item, index) => { state.run.upgrades[item.id] = Math.min(item.maxLevel, plan.arrays[index] || 0); });
+}
+
+function getPlanStoneCost(realmIndex, plan, now) {
+  const state = createDefaultState(now);
+  state.run.stageIndex = realmIndex * 4;
+  let total = 0;
+  for (const categoryId of ["arts", "arrays"]) {
+    const levels = plan[categoryId];
+    SHOP_CATEGORIES[categoryId].items.forEach((item, itemIndex) => {
+      const target = Math.min(item.maxLevel, levels[itemIndex] || 0);
+      for (let level = 0; level < target; level += 1) {
+        total += getItemCost(state, item).stones;
+        state.run.upgrades[item.id] += 1;
+      }
+    });
+  }
+  return total;
+}
+
+export function analyzeBalanceCurve(now = 1_800_000_000_000) {
+  const stages = [];
+  for (let realmIndex = 0; realmIndex < REALMS.length; realmIndex += 1) {
+    const plan = BALANCED_INVESTMENT_PLANS[realmIndex];
+    const state = createDefaultState(now);
+    state.run.stageIndex = realmIndex * 4;
+    applyInvestmentPlan(state, plan);
+    const stats = getDerivedStats(state, now);
+    const stoneCost = getPlanStoneCost(realmIndex, plan, now);
+    const rewardPerTask = calculateTaskReward(realmIndex, 1.35, 0.5);
+    const taskWindows = Math.ceil(stoneCost / Math.max(1, rewardPerTask * 3));
+    for (let substage = 0; substage < 4; substage += 1) {
+      const stage = getStageDefinition(realmIndex * 4 + substage);
+      const fillSeconds = stage.cap / stats.qps;
+      stages.push({
+        stageIndex: stage.index, name: stage.name, cap: stage.cap, qps: stats.qps,
+        fillSeconds, lifespanSeconds: stats.maxLifespan, lifespanRatio: fillSeconds / stats.maxLifespan,
+        stoneCost, rewardPerTask, taskWindows
+      });
+    }
+  }
+  return stages;
+}
+
+export function runBalanceAssertions() {
+  const stages = analyzeBalanceCurve();
+  assertEqual(stages.length, 36, "平衡模型覆盖全部36阶");
+  for (const stage of stages) {
+    assert(Number.isFinite(stage.cap) && stage.cap > 0, `${stage.name}灵气上限安全`);
+    assert(Number.isFinite(stage.qps) && stage.qps > 0, `${stage.name}均衡投资产出有效`);
+    assert(Number.isFinite(stage.fillSeconds) && stage.fillSeconds > 0, `${stage.name}填充时间安全`);
+    assert(stage.lifespanRatio <= 0.5, `${stage.name}单阶填充不超过寿元预算一半`);
+    assert(stage.taskWindows <= 50, `${stage.name}均衡投资可在50个任务窗口内形成`);
+  }
+  for (let realmIndex = 0; realmIndex < REALMS.length; realmIndex += 1) {
+    const realmStages = stages.filter((stage) => Math.floor(stage.stageIndex / 4) === realmIndex);
+    const totalFill = realmStages.reduce((sum, stage) => sum + stage.fillSeconds, 0);
+    assert(totalFill <= realmStages[0].lifespanSeconds * 0.75, `${REALMS[realmIndex].name}四阶总填充保留突破与操作余量`);
+  }
+  return stages;
+}
+
 export function runRegressionAssertions() {
   const now = 1_800_000_000_000;
   const roots = createDefaultState(now); roots.run.upgrades.root_mortal = 10; roots.run.upgrades.root_earth = 2; roots.run.upgrades.root_heaven = 1; roots.run.upgrades.root_chaos = 1; const rootStats = getDerivedStats(roots, now); assertNear(rootStats.baseClick, 9, 1e-9, "凡品聚合基础点击"); assertNear(rootStats.rootMultiplier, Math.pow(1 + .32 + .28 + .45, .72), 1e-9, "灵根聚合倍率"); assertEqual(rootStats.clickIntervalMs, 234, "灵根吐纳间隔聚合");
@@ -22,7 +99,7 @@ export function runRegressionAssertions() {
   const dual = createDefaultState(now); dual.spiritStones = 2; dual.run.qi = 39; const beforeStones = dual.spiritStones; const failedDual = purchaseItem(dual, "art_breath", now); assertEqual(failedDual.ok, false, "功法双资源不足拒绝购买"); assertEqual(dual.spiritStones, beforeStones, "双资源购买失败不扣灵石"); assertEqual(dual.run.qi, 39, "双资源购买失败不扣灵气"); dual.run.qi = 40; assertEqual(purchaseItem(dual, "art_breath", now).ok, true, "功法双资源原子购买成功");
   const foundation = createDefaultState(now); foundation.run.stageIndex = 3; foundation.run.qi = getDerivedStats(foundation, now).stage.cap; assertEqual(canBreakthrough(foundation, now).ok, false, "大境界边界检查道基"); attemptBreakthrough(foundation, now, () => 0); assertEqual(foundation.run.stats.breakthroughAttempts, 0, "道基不满足不计突破尝试"); foundation.run.upgrades.art_breath = 3; assertEqual(canBreakthrough(foundation, now).ok, true, "道基满足可跨大境界"); const minor = createDefaultState(now); minor.run.qi = 100; assertEqual(canBreakthrough(minor, now).ok, true, "小阶段突破无道基要求");
   const rebirth = createDefaultState(now); rebirth.spiritStones = 17; performRebirth(rebirth, "测试", now); assertEqual(rebirth.spiritStones, 17, "轮回保留灵石");
-  const stable = createDefaultState(now); stable.tasks.profileSeed = "fixed-seed"; const tasksA = generateTasks(stable, getDerivedStats(stable, now), 12345); const tasksB = generateTasks(stable, getDerivedStats(stable, now), 12345); assertEqual(JSON.stringify(tasksA.map(({ completedAt, ...task }) => task)), JSON.stringify(tasksB.map(({ completedAt, ...task }) => task)), "同种子同窗口任务稳定"); assertEqual(new Set(tasksA.map((task) => task.templateId)).size, 3, "同窗口模板不重复");
+  const stable = createDefaultState(now); stable.tasks.profileSeed = "fixed-seed"; const tasksA = generateTasks(stable, getDerivedStats(stable, now), 12345); const tasksB = generateTasks(stable, getDerivedStats(stable, now), 12345); assertEqual(JSON.stringify(tasksA.map(({ completedAt, ...task }) => task)), JSON.stringify(tasksB.map(({ completedAt, ...task }) => task)), "同种子同窗口任务稳定"); assertEqual(new Set(tasksA.map((task) => task.templateId)).size, 3, "同窗口模板不重复"); assert(calculateTaskReward(8, 1.8, 0.5) > calculateTaskReward(0, 1.8, 0.5) * 500, "任务灵石奖励随境界受控成长");
   stable.tasks.active = [{ ...tasksA[0], target: 1, progress: 0, completedAt: 0 }]; updateTaskProgress(stable, stable.tasks.active[0].event, 1); stable.tasks.active[0].completedAt ||= now; const firstClaim = claimTask(stable, stable.tasks.active[0].id, now); const secondClaim = claimTask(stable, stable.tasks.active[0].id, now); assertEqual(firstClaim.ok, true, "任务可领取"); assertEqual(secondClaim.ok, false, "任务领取幂等");
   const rollover = createDefaultState(now); rollover.tasks.profileSeed = "roll"; rollover.tasks.windowId = Math.floor(now / TASK_WINDOW_MS); rollover.tasks.highestWindow = rollover.tasks.windowId; rollover.tasks.lastObservedAt = now; rollover.tasks.active = [{ ...generateTasks(rollover, getDerivedStats(rollover, now), rollover.tasks.windowId)[0], completedAt: now, claimedAt: 0 }]; syncTaskWindow(rollover, getDerivedStats(rollover, now), now + TASK_WINDOW_MS); assertEqual(rollover.tasks.archive.length, 1, "跨窗口已完成未领取进入归档"); const high = rollover.tasks.highestWindow; syncTaskWindow(rollover, getDerivedStats(rollover, now), now - TASK_WINDOW_MS); assertEqual(rollover.tasks.highestWindow, high, "时间回拨不重开旧窗口");
   const achievement = createDefaultState(now); achievement.permanentStats.totalClicks = 100; evaluateAchievements(achievement, now); assertEqual(Boolean(achievement.achievements.entries.click_100.unlockedAt), true, "成就可由可靠统计回溯解锁"); const ac1 = claimAchievement(achievement, "click_100", now), ac2 = claimAchievement(achievement, "click_100", now); assertEqual(ac1.ok, true, "成就可领取"); assertEqual(ac2.ok, false, "成就领取幂等"); achievement.permanentStats.highestStage = 8; evaluateAchievements(achievement, now); claimAchievement(achievement, "reach_core", now); assertNear(achievement.achievements.bonuses.breakthrough, .01, 1e-9, "成就永久突破奖励受控");
@@ -51,4 +128,5 @@ export function runRegressionAssertions() {
   const maliciousCombat = sanitizeCombatState({ status: "playerTurn", battleId: "bad", seed: "bad", startedAt: now, playerTurnNumber: 1, player: { maxHp: 100, hp: 999, attack: 10, defense: 4, critChance: 99, resolve: 99, buffs: { pill_edge: { turns: 99, attackMultiplier: 99 }, forged: { turns: 99 } } }, enemy: { type: "demonic", maxHp: 100, hp: 100, attack: 10, defense: 4 }, flags: {}, logs: [] }, now); assertEqual(maliciousCombat.player.hp, 100, "战斗生命按上限清洗"); assertEqual(maliciousCombat.player.critChance, 0.35, "战斗暴击率白名单清洗"); assertEqual(maliciousCombat.player.resolve, 6, "战意按上限清洗"); assertEqual(maliciousCombat.player.buffs.pill_edge.turns, 3, "战斗丹药回合按配置清洗"); assertEqual(Boolean(maliciousCombat.player.buffs.forged), false, "伪造战斗Buff被移除"); assertEqual(sanitizeCombatState({ ...maliciousCombat, status: "settling", resultApplied: false }, now).status, "idle", "未应用结果的损坏结算态被丢弃");
 
   const rebirthCombat = createDefaultState(now); rebirthCombat.run.lifespanRemaining = 10_000; startCombat(rebirthCombat, { source: "skirmish", enemyType: "beast", seed: "rebirth" }, now); performRebirth(rebirthCombat, "测试轮回", now + 1); assertEqual(rebirthCombat.run.combat.status, "idle", "轮回取消未结束战斗"); assertEqual(rebirthCombat.permanentStats.combatLosses, 0, "轮回取消不计战斗失败");
+  runBalanceAssertions();
 }

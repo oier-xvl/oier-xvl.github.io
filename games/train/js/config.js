@@ -12,15 +12,15 @@ export const MAX_SKIRMISH_SECONDS = 12 * 60;
 export const SKIRMISH_TTL_MS = 5 * 60 * 1000;
 
 export const REALMS = [
-  { name: "练气", baseCap: 100, lifespan: 900, multiplier: 1, success: 1 },
-  { name: "筑基", baseCap: 1_400, lifespan: 1_800, multiplier: 1.45, success: 1 },
-  { name: "金丹", baseCap: 28_000, lifespan: 3_600, multiplier: 1.7, success: 0.86 },
-  { name: "元婴", baseCap: 760_000, lifespan: 7_200, multiplier: 2, success: 0.78 },
-  { name: "化神", baseCap: 28_000_000, lifespan: 14_400, multiplier: 2.35, success: 0.7 },
-  { name: "炼虚", baseCap: 1.4e9, lifespan: 28_800, multiplier: 2.75, success: 0.62 },
-  { name: "合体", baseCap: 9.5e10, lifespan: 57_600, multiplier: 3.2, success: 0.55 },
-  { name: "大乘", baseCap: 8.5e12, lifespan: 115_200, multiplier: 3.7, success: 0.48 },
-  { name: "渡劫", baseCap: 1.05e15, lifespan: 230_400, multiplier: 4.3, success: 0.4 }
+  { name: "练气", baseCap: 100, lifespan: 900, multiplier: 1, success: 1, stageGrowth: 3.2 },
+  { name: "筑基", baseCap: 1_400, lifespan: 1_800, multiplier: 1.45, success: 1, stageGrowth: 3 },
+  { name: "金丹", baseCap: 28_000, lifespan: 3_600, multiplier: 1.7, success: 0.86, stageGrowth: 2.8 },
+  { name: "元婴", baseCap: 720_000, lifespan: 7_200, multiplier: 2, success: 0.78, stageGrowth: 2.65 },
+  { name: "化神", baseCap: 20_000_000, lifespan: 14_400, multiplier: 2.35, success: 0.7, stageGrowth: 2.5 },
+  { name: "炼虚", baseCap: 600_000_000, lifespan: 28_800, multiplier: 2.75, success: 0.62, stageGrowth: 2.4 },
+  { name: "合体", baseCap: 25_000_000_000, lifespan: 57_600, multiplier: 3.2, success: 0.55, stageGrowth: 2.3 },
+  { name: "大乘", baseCap: 1_200_000_000_000, lifespan: 115_200, multiplier: 3.7, success: 0.48, stageGrowth: 2.2 },
+  { name: "渡劫", baseCap: 80_000_000_000_000, lifespan: 230_400, multiplier: 4.3, success: 0.4, stageGrowth: 2.1 }
 ];
 export const STAGES = ["前期", "中期", "后期", "大圆满"];
 export const FINAL_STAGE_INDEX = REALMS.length * STAGES.length - 1;
@@ -39,7 +39,7 @@ export function getStageDefinition(stageIndex) {
   return {
     index: safeStage, realmIndex, substage, realm,
     name: `${realm.name} · ${STAGES[substage]}`,
-    cap: realm.baseCap * Math.pow(3.2, substage),
+    cap: realm.baseCap * Math.pow(realm.stageGrowth, substage),
     success: Math.max(0.25, realm.success - (realmIndex >= 2 ? substage * 0.035 : 0)),
     isFinal: safeStage === FINAL_STAGE_INDEX
   };
@@ -53,11 +53,11 @@ export const SHOP_CATEGORIES = {
     { id: "root_chaos", category: "roots", currency: "qi", glyph: "混", name: "混沌道根", description: "灵根原值每级 +0.45，暴击伤害每级 +0.25", baseCost: 18_000_000, growth: 2.65, maxLevel: 6, softCap: 3, unlockRealm: 4 }
   ]},
   arts: { label: "功法", items: [
-    { id: "art_breath", category: "arts", currency: "dual", glyph: "息", name: "引气诀", description: "功法主产出，每级基础每息 1", qps: 1, stoneCost: 2, stoneGrowth: 1.28, qiCost: 40, qiGrowth: 1.42, maxLevel: 40, unlockRealm: 0 },
-    { id: "art_cloud", category: "arts", currency: "dual", glyph: "云", name: "流云经", description: "功法主产出，每级基础每息 16", qps: 16, stoneCost: 8, stoneGrowth: 1.32, qiCost: 2_500, qiGrowth: 1.46, maxLevel: 32, unlockRealm: 1 },
-    { id: "art_sun", category: "arts", currency: "dual", glyph: "阳", name: "大日真经", description: "功法主产出，每级基础每息 300", qps: 300, stoneCost: 30, stoneGrowth: 1.36, qiCost: 90_000, qiGrowth: 1.5, maxLevel: 26, unlockRealm: 2 },
-    { id: "art_void", category: "arts", currency: "dual", glyph: "虚", name: "太虚玄典", description: "功法主产出，每级基础每息 8k", qps: 8_000, stoneCost: 100, stoneGrowth: 1.4, qiCost: 3_000_000, qiGrowth: 1.54, maxLevel: 20, unlockRealm: 3 },
-    { id: "art_star", category: "arts", currency: "dual", glyph: "星", name: "周天星衍录", description: "功法主产出，每级基础每息 320k", qps: 320_000, stoneCost: 360, stoneGrowth: 1.44, qiCost: 180_000_000, qiGrowth: 1.58, maxLevel: 16, unlockRealm: 5 }
+    { id: "art_breath", category: "arts", currency: "dual", glyph: "息", name: "引气诀", description: "功法主产出，每级基础每息 1", qps: 1, stoneCost: 2, stoneGrowth: 1.26, qiCost: 40, qiGrowth: 1.4, maxLevel: 40, unlockRealm: 0 },
+    { id: "art_cloud", category: "arts", currency: "dual", glyph: "云", name: "流云经", description: "功法主产出，每级基础每息 18", qps: 18, stoneCost: 8, stoneGrowth: 1.29, qiCost: 2_500, qiGrowth: 1.43, maxLevel: 32, unlockRealm: 1 },
+    { id: "art_sun", category: "arts", currency: "dual", glyph: "阳", name: "大日真经", description: "功法主产出，每级基础每息 360", qps: 360, stoneCost: 26, stoneGrowth: 1.31, qiCost: 90_000, qiGrowth: 1.46, maxLevel: 26, unlockRealm: 2 },
+    { id: "art_void", category: "arts", currency: "dual", glyph: "虚", name: "太虚玄典", description: "功法主产出，每级基础每息 12k", qps: 12_000, stoneCost: 80, stoneGrowth: 1.33, qiCost: 3_000_000, qiGrowth: 1.48, maxLevel: 22, unlockRealm: 3 },
+    { id: "art_star", category: "arts", currency: "dual", glyph: "星", name: "周天星衍录", description: "功法主产出，每级基础每息 500k", qps: 500_000, stoneCost: 180, stoneGrowth: 1.34, qiCost: 150_000_000, qiGrowth: 1.5, maxLevel: 20, unlockRealm: 5 }
   ]},
   arrays: { label: "阵法", items: [
     { id: "array_spirit", category: "arrays", currency: "stones", glyph: "聚", name: "聚灵阵", description: "阵法强度每级 +0.08", arrayPower: 0.08, baseCost: 5, growth: 1.42, maxLevel: 20, unlockRealm: 0 },

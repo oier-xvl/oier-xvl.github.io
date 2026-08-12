@@ -4,6 +4,8 @@ import { clamp, finiteNumber } from "./numbers.js";
 export const TASK_WINDOW_MS = 600_000;
 export const TASK_ARCHIVE_LIMIT = 8;
 export const TASK_ARCHIVE_TTL_MS = 86_400_000;
+export const TASK_REWARD_BASE = [1, 2, 5, 12, 28, 64, 145, 325, 720];
+const MAX_TASK_REWARD = Math.ceil(TASK_REWARD_BASE.at(-1) * 2);
 const CLAIM_HISTORY_LIMIT = 80;
 
 function hashString(text) {
@@ -94,6 +96,12 @@ const TASK_EVENT_BY_TEMPLATE = Object.fromEntries(TEMPLATES.map((template) => {
 const VALID_TASK_EVENTS = new Set([...Object.values(TASK_EVENT_BY_TEMPLATE), "purchase:nonRoot"]);
 const COMBAT_TASK_TYPES = new Set(["demonic", "beast"]);
 
+export function calculateTaskReward(realmIndex, difficulty, roll = 0.5) {
+  const safeRealm = Math.floor(clamp(realmIndex, 0, TASK_REWARD_BASE.length - 1));
+  const factor = 0.8 + clamp(difficulty, 0, 3) * 0.35 + clamp(roll, 0, 1) * 0.4;
+  return Math.max(1, Math.round(TASK_REWARD_BASE[safeRealm] * factor));
+}
+
 export function createTaskState(profileSeed = "", now = Date.now()) {
   return { profileSeed: profileSeed || `${now.toString(36)}-${Math.random().toString(36).slice(2, 10)}`, windowId: -1, highestWindow: -1, lastObservedAt: now, claimCooldownUntil: 0, active: [], archive: [], claimedIds: [] };
 }
@@ -115,7 +123,7 @@ export function generateTasks(state, stats, windowId) {
   }
   return selected.map((template, slot) => {
     const detail = template.make(snapshot, random);
-    const reward = Math.max(1, Math.min(5, Math.round(detail.difficulty + snapshot.realmIndex * 0.22 + random() * 0.55)));
+    const reward = calculateTaskReward(snapshot.realmIndex, detail.difficulty, random());
     return { id: `${windowId}:${slot}`, windowId, slot, templateId: template.id, ...detail, reward, progress: detail.absolute && detail.event === "stageProgress" ? snapshot.progress : 0, completedAt: detail.absolute && snapshot.progress >= detail.target ? Date.now() : 0, claimedAt: 0, createdAt: windowId * TASK_WINDOW_MS, retryAt: 0, completedBattleId: "" };
   });
 }
@@ -225,7 +233,7 @@ export function sanitizeTasks(raw, now = Date.now()) {
     return {
       id: task.id.slice(0, 80), windowId: Math.floor(finiteNumber(task.windowId, -1)), slot: Math.floor(clamp(task.slot, 0, 2)), templateId: task.templateId,
       name: String(task.name || "任务").slice(0, 40), description: String(task.description || "").slice(0, 160), event,
-      target, difficulty: clamp(task.difficulty, 0, 10), reward: Math.floor(clamp(task.reward, 1, 5)), progress: clamp(task.progress, 0, target),
+      target, difficulty: clamp(task.difficulty, 0, 10), reward: Math.floor(clamp(task.reward, 1, MAX_TASK_REWARD)), progress: clamp(task.progress, 0, target),
       completedAt, claimedAt, createdAt: clamp(task.createdAt, 0, now), archivedAt: clamp(task.archivedAt, 0, now), absolute: task.templateId === "reach_eighty",
       combat: task.templateId.startsWith("combat_") && COMBAT_TASK_TYPES.has(task.combat?.enemyType) ? { enemyType: task.combat.enemyType, strength: clamp(task.combat.strength, 0.75, 1.45), seedPart: Math.floor(clamp(task.combat.seedPart, 1, 2_000_000_000)) } : null,
       retryAt: clamp(task.retryAt, 0, now + TASK_ARCHIVE_TTL_MS), completedBattleId: completedAt ? String(task.completedBattleId || "").slice(0, 120) : ""
